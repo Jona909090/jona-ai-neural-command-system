@@ -61,21 +61,23 @@ function MainZones({ active, onHover }) {
   </group>)}</>
 }
 
-export default function NeuralNetwork({ ready }) {
+export default function NeuralNetwork({ ready, boot }) {
   const group = useRef(), points = useRef(), signals = useRef()
   const [hovered, setHovered] = useState(null)
   const { state, sequence } = useNeuralState()
   const data = useMemo(generateNetwork, [])
   const sig = useMemo(() => ({ pos: new Float32Array(CONFIG.signalCount * 3), phase: Array.from({ length: CONFIG.signalCount }, () => Math.random()), edge: Array.from({ length: CONFIG.signalCount }, () => Math.floor(Math.random() * data.edges.length)) }), [data])
   const { pointer } = useThree()
-  const statePower = state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .7 : state === 'LISTENING' ? .45 : 0
+  const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
+  const bootPower = boot?.phase === 'impact' ? 1.6 : boot?.phase === 'zones' ? .7 : 0
+  const statePower = Math.max(bootPower, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .7 : state === 'LISTENING' ? .45 : 0)
 
   useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime
     group.current.rotation.y += delta * .018
     group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, pointer.y * .055, .025)
     group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, -pointer.x * .04, .025)
-    points.current.material.opacity = THREE.MathUtils.lerp(points.current.material.opacity, ready ? .9 : .12, .03)
+    points.current.material.opacity = THREE.MathUtils.lerp(points.current.material.opacity, ready ? .9 : booting ? .72 : .02, boot?.phase === 'impact' ? .12 : .03)
     points.current.material.size = 0.038 + Math.sin(t * 2.4) * .007 + statePower * .018
     for (let i = 0; i < CONFIG.signalCount; i++) {
       sig.phase[i] = (sig.phase[i] + delta * (.13 + statePower * .34 + (i % 7) * .008)) % 1
@@ -86,10 +88,10 @@ export default function NeuralNetwork({ ready }) {
     signals.current.geometry.attributes.position.needsUpdate = true
   })
 
-  return <group ref={group} scale={ready ? 1 : .12}>
+  return <group ref={group} scale={ready ? 1 : booting ? 1 : .04}>
     <lineSegments>
       <bufferGeometry><bufferAttribute attach="attributes-position" args={[data.linePos, 3]} /><bufferAttribute attach="attributes-color" args={[data.lineCol, 3]} /></bufferGeometry>
-      <lineBasicMaterial vertexColors transparent opacity={ready ? .19 + statePower * .12 : .03} blending={THREE.AdditiveBlending} depthWrite={false} />
+      <lineBasicMaterial vertexColors transparent opacity={ready || booting ? .19 + statePower * .12 : .005} blending={THREE.AdditiveBlending} depthWrite={false} />
     </lineSegments>
     <points ref={points}>
       <bufferGeometry><bufferAttribute attach="attributes-position" args={[data.positions, 3]} /><bufferAttribute attach="attributes-color" args={[data.colors, 3]} /></bufferGeometry>
@@ -99,7 +101,7 @@ export default function NeuralNetwork({ ready }) {
       <bufferGeometry><bufferAttribute attach="attributes-position" args={[sig.pos, 3]} /></bufferGeometry>
       <pointsMaterial color="#ffffff" size={.095 + statePower * .05} sizeAttenuation transparent opacity={1} blending={THREE.AdditiveBlending} depthWrite={false} />
     </points>
-    <Core intensity={statePower} /><MainZones active={sequence} onHover={setHovered} />
+    <Core intensity={statePower} /><MainZones active={boot?.phase === 'zones' ? ZONES.slice(0, boot.zone + 1).map(z => z.name) : sequence} onHover={setHovered} />
     {hovered !== null && <Html position={ZONES[hovered].pos} center className="zone-label"><strong>{ZONES[hovered].name}</strong><span>Neural system active</span></Html>}
   </group>
 }

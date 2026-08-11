@@ -7,11 +7,12 @@ import CommandInput from './components/CommandInput'
 
 export default function App() {
   const [ready, setReady] = useState(false)
+  const [boot, setBoot] = useState({ started: false, phase: 'gate', progress: 0, zone: -1 })
   return <NeuralStateProvider>
     <main className="app">
-      <NeuralScene ready={ready} />
+      <NeuralScene ready={ready} boot={boot} />
       <div className={`interface ${ready ? 'visible' : ''}`}><HUD /><CommandInput /></div>
-      {!ready && <StartupSequence onComplete={() => setReady(true)} />}
+      {!ready && <StartupSequence onProgress={setBoot} onComplete={() => setReady(true)} />}
       <div className="scanlines" />
     </main>
   </NeuralStateProvider>
