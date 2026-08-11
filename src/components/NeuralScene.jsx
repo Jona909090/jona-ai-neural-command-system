@@ -8,7 +8,7 @@ import { CONFIG } from '../config/neuralConfig'
 export default function NeuralScene({ ready, boot }) {
   const revealed = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot.phase)
   return <div className={`scene ${ready ? 'online' : ''} ${revealed ? 'boot-reveal' : ''} boot-${boot.phase}`}>
-    <Canvas dpr={[1, 1.65]} camera={{ position: [0, 0, 16.2], fov: 48 }} gl={{ antialias: false, powerPreference: 'high-performance' }}>
+    <Canvas dpr={[1, 1.65]} camera={{ position: [0, 0, 15.3], fov: 48 }} gl={{ antialias: false, powerPreference: 'high-performance' }}>
       <color attach="background" args={['#010208']} />
       <fog attach="fog" args={['#010208', 13, 29]} />
       <ambientLight intensity={0.08} />

@@ -49,21 +49,21 @@ function generateArchitecture() {
     addNode(center, color.clone().lerp(new THREE.Color('white'), .35), 7)
 
     // Each main system owns 5–8 sub-cores, each with 8–18 satellite nodes.
-    const subCount = 5 + (zoneIndex % 4)
+    const subCount = 7 + (zoneIndex % 3)
     for (let s = 0; s < subCount; s++) {
       const angle = (s / subCount) * Math.PI * 2 + zoneIndex * .41
       const sub = center.clone().add(new THREE.Vector3(Math.cos(angle) * rand(.75, 1.45), Math.sin(angle) * rand(.58, 1.18), rand(-1.05, 1.05)))
       subCores.push(sub); addNode(sub, color.clone().lerp(new THREE.Color('white'), .18), rand(3.1, 4.8)); addVertex(system, center, sub, color.clone().multiplyScalar(.8), color)
-      const satellites = 9 + ((s * 3 + zoneIndex) % 10), cluster = []
+      const satellites = 14 + ((s * 3 + zoneIndex) % 11), cluster = []
       for (let n = 0; n < satellites; n++) {
         const theta = rand(0, Math.PI * 2), phi = Math.acos(rand(-1, 1)), radius = rand(.12, .55)
         const p = sub.clone().add(new THREE.Vector3(Math.sin(phi) * Math.cos(theta) * radius, Math.cos(phi) * radius, Math.sin(phi) * Math.sin(theta) * radius * 1.6))
         cluster.push(p); localNodes.push(p); addNode(p, color.clone().lerp(new THREE.Color('#ffffff'), Math.random() * .2), rand(.7, 2.05)); addVertex(local, sub, p, color)
       }
-      for (let n = 0; n < cluster.length * 1.5; n++) { const a = cluster[Math.floor(Math.random() * cluster.length)], b = cluster[Math.floor(Math.random() * cluster.length)]; if (a !== b) addVertex(local, a, b, color.clone().multiplyScalar(.7)) }
+      for (let n = 0; n < cluster.length * 2.25; n++) { const a = cluster[Math.floor(Math.random() * cluster.length)], b = cluster[Math.floor(Math.random() * cluster.length)]; if (a !== b) addVertex(local, a, b, color.clone().multiplyScalar(.76)) }
     }
     // Cross-link the sub-cores so each zone reads as a self-contained brain.
-    subCores.forEach((sub, i) => { addVertex(system, sub, subCores[(i + 1) % subCores.length], color); if (i % 2 === 0) addVertex(system, sub, subCores[(i + 2) % subCores.length], color.clone().multiplyScalar(.75)) })
+    subCores.forEach((sub, i) => { addVertex(system, sub, subCores[(i + 1) % subCores.length], color); addVertex(system, sub, subCores[(i + 2) % subCores.length], color.clone().multiplyScalar(.75)); if (i % 2 === 0) addVertex(system, sub, subCores[(i + 3) % subCores.length], color.clone().multiplyScalar(.58)) })
     systemData.push({ center, color, subCores, localNodes })
   })
 
@@ -166,9 +166,9 @@ export default function NeuralNetwork({ ready, boot }) {
   })
 
   return <group ref={group} scale={ready || booting ? 1 : .04}>
-    <Lines position={data.localPos} color={data.localCol} opacity={.27 + statePower * .06} />
-    <Lines position={data.systemPos} color={data.systemCol} opacity={.62 + statePower * .08} />
-    <Lines position={data.globalPos} color={data.globalCol} opacity={.76 + statePower * .12} linewidth={2} />
+    <Lines position={data.localPos} color={data.localCol} opacity={.39 + statePower * .07} />
+    <Lines position={data.systemPos} color={data.systemCol} opacity={.75 + statePower * .08} />
+    <Lines position={data.globalPos} color={data.globalCol} opacity={.9 + statePower * .08} linewidth={2} />
     <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.045} sizeAttenuation transparent opacity={.9} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <Signals data={data} power={statePower} /><JonaCore intensity={statePower} />
     {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name)} onHover={setHovered} />)}

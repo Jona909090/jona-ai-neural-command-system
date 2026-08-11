@@ -4,8 +4,8 @@ export const CONFIG = {
   signalCount: 62,
   starCount: 1100,
   coreRadius: 5.1,
-  bloomIntensity: 1.25,
-  bloomThreshold: 0.16,
+  bloomIntensity: 1.42,
+  bloomThreshold: 0.12,
   pulseSpeed: 1,
   burstStrength: 2.8,
 }
