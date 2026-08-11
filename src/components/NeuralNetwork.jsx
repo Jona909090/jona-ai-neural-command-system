@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { CONFIG, ZONES } from '../config/neuralConfig'
 import { useNeuralState } from '../state/NeuralStateContext'
+import { useVoice } from '../controllers/VoiceContext'
 
 const rand = (a, b) => a + Math.random() * (b - a)
 const CORE_COLOR = new THREE.Color('#69eaff')
@@ -121,9 +122,9 @@ function JonaCore({ intensity }) {
   </group>
 }
 
-function SystemCore({ zone, index, active, hovered, focused, subCores, onHover, onFocus }) {
+function SystemCore({ zone, index, active, hovered, focused, subCores, onHover, onFocus, audioLevel }) {
   const ref = useRef(), pulseSpeed = .72 + index * .11, names = SUB_CORE_NAMES[zone.name]
-  useFrame(({ clock }) => { const boost = active ? .18 : 0, p = 1 + Math.sin(clock.elapsedTime * pulseSpeed * 2) * (.055 + boost); ref.current.scale.setScalar(p); ref.current.rotation.y += .003 + index * .0002 })
+  useFrame(({ clock }) => { const boost = active ? .18 : 0, p = 1 + Math.sin(clock.elapsedTime * pulseSpeed * 2) * (.055 + boost) + audioLevel * .24; ref.current.scale.setScalar(p); ref.current.rotation.y += .003 + index * .0002 })
   return <group position={zone.pos}>
     <group ref={ref}>
       <mesh onClick={e => { e.stopPropagation(); onFocus(zone.name) }} onPointerOver={e => { e.stopPropagation(); onHover(index); document.body.style.cursor = 'pointer' }} onPointerOut={() => { onHover(null); document.body.style.cursor = 'default' }}><icosahedronGeometry args={[.28, 1]} /><meshBasicMaterial color={zone.color} wireframe /></mesh>
@@ -194,9 +195,10 @@ function FocusConnections({ system }) {
 export default function NeuralNetwork({ ready, boot }) {
   const group = useRef(), points = useRef(), [hovered, setHovered] = useState(null)
   const data = useMemo(generateArchitecture, []), { pointer, camera, controls } = useThree(), { state, sequence, signal, focusedSystem, focusSystem, intensities } = useNeuralState()
+  const voice = useVoice()
   const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
   const bootPower = boot?.phase === 'impact' ? 1.25 : boot?.phase === 'zones' ? .65 : 0
-  const statePower = Math.max(bootPower, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .7 : state === 'LISTENING' ? .45 : 0)
+  const statePower = Math.max(bootPower, voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .7 : state === 'LISTENING' ? .45 : 0)
   const active = boot?.phase === 'zones' ? SYSTEMS.slice(0, boot.zone + 1).map(z => z.name) : sequence
   const focusIndex = SYSTEMS.findIndex(s => s.name === focusedSystem), focusPos = focusIndex >= 0 ? new THREE.Vector3(...SYSTEMS[focusIndex].pos) : new THREE.Vector3()
 
@@ -221,6 +223,6 @@ export default function NeuralNetwork({ ready, boot }) {
     {(focusIndex >= 0 || hovered !== null) && <FocusConnections system={data.systemData[focusIndex >= 0 ? focusIndex : hovered]} />}
     <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.045} sizeAttenuation transparent opacity={.9} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <Signals data={data} power={statePower} /><PrimarySignal signal={signal} data={data} /><JonaCore intensity={statePower} />
-    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || (intensities[zone.name] || 0) > .5} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={setHovered} onFocus={focusSystem} />)}
+    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || (intensities[zone.name] || 0) > .5} audioLevel={(voice.status === 'LISTENING' && i === 0) || (voice.status === 'SPEAKING' && i === 7) ? voice.amplitude : 0} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={setHovered} onFocus={focusSystem} />)}
   </group>
 }
