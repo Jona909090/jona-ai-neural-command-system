@@ -117,7 +117,7 @@ function JonaCore({ intensity }) {
   useFrame(({ clock }, delta) => { shell.current.rotation.y += delta * .09; shell.current.rotation.z -= delta * .035; const p = 1 + Math.sin(clock.elapsedTime * 1.65) * .035 + intensity * .025; shell.current.scale.setScalar(p) })
   return <group>
     <group ref={shell}><EnergyRings color="#65eaff" radius={1.12} speed={.55} intensity={.85} /><mesh><icosahedronGeometry args={[.88, 2]} /><meshBasicMaterial color="#8befff" wireframe transparent opacity={.33} /></mesh><mesh><icosahedronGeometry args={[.32, 1]} /><meshBasicMaterial color="#e7fbff" transparent opacity={.54} /></mesh></group>
-    <pointLight color="#56dfff" intensity={2.2 + intensity * 2.4} distance={5.5} />
+    <pointLight color="#3fc9ff" intensity={1.35 + intensity * 1.55} distance={4.8} />
     <Html center distanceFactor={8} className="core-label"><strong>JONA AI</strong><span>CORE</span></Html>
   </group>
 }
@@ -128,7 +128,7 @@ function SystemCore({ zone, index, active, hovered, focused, subCores, onHover, 
   return <group position={zone.pos}>
     <group ref={ref}>
       <mesh onClick={e => { e.stopPropagation(); onFocus(zone.name) }} onPointerOver={e => { e.stopPropagation(); onHover(index); document.body.style.cursor = 'pointer' }} onPointerOut={() => { onHover(null); document.body.style.cursor = 'default' }}><icosahedronGeometry args={[.28, 1]} /><meshBasicMaterial color={zone.color} wireframe /></mesh>
-      <mesh><icosahedronGeometry args={[.12, 1]} /><meshBasicMaterial color="white" /></mesh>
+      <mesh><icosahedronGeometry args={[.105, 1]} /><meshBasicMaterial color={zone.color} /></mesh>
       <EnergyRings color={zone.color} radius={.36} speed={pulseSpeed} intensity={active || hovered ? 1.5 : .9} />
       <pointLight color={zone.color} intensity={active || hovered ? 6 : 2.2} distance={3.4} />
     </group>
@@ -163,7 +163,7 @@ function Signals({ data, power }) {
     }
     ref.current.geometry.attributes.position.needsUpdate = true; ref.current.geometry.attributes.color.needsUpdate = true
   })
-  return <points ref={ref}><bufferGeometry><bufferAttribute attach="attributes-position" args={[signalData.positions, 3]} /><bufferAttribute attach="attributes-color" args={[signalData.colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={.105 + power * .035} transparent opacity={1} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+  return <points ref={ref}><bufferGeometry><bufferAttribute attach="attributes-position" args={[signalData.positions, 3]} /><bufferAttribute attach="attributes-color" args={[signalData.colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={.072 + power * .018} transparent opacity={1} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
 }
 
 function PrimarySignal({ signal, data }) {
@@ -175,11 +175,11 @@ function PrimarySignal({ signal, data }) {
     const a = resolve(signal.path[signal.step]), b = resolve(signal.path[signal.step + 1]); if (!a || !b) return
     progress.current = Math.min(1, progress.current + delta / .66); ref.current.visible = true; ref.current.position.copy(a).lerp(b, progress.current); halo.current.scale.setScalar(1 + Math.sin(progress.current * Math.PI) * 2.5)
   })
-  return <group ref={ref} visible={false}><mesh><sphereGeometry args={[.105, 10, 10]} /><meshBasicMaterial color="white" /></mesh><mesh ref={halo}><sphereGeometry args={[.2, 10, 10]} /><meshBasicMaterial color="#65efff" transparent opacity={.22} blending={THREE.AdditiveBlending} /></mesh><pointLight color="#a8ffff" intensity={8} distance={3} /></group>
+  return <group ref={ref} visible={false}><mesh><sphereGeometry args={[.075, 10, 10]} /><meshBasicMaterial color="#eaffff" /></mesh><mesh ref={halo}><sphereGeometry args={[.13, 10, 10]} /><meshBasicMaterial color="#65efff" transparent opacity={.16} blending={THREE.AdditiveBlending} /></mesh><pointLight color="#65efff" intensity={4} distance={1.8} /></group>
 }
 
-function Lines({ position, color, opacity, linewidth = 1 }) {
-  return <lineSegments><bufferGeometry><primitive attach="attributes-position" object={position} /><primitive attach="attributes-color" object={color} /></bufferGeometry><lineBasicMaterial vertexColors transparent opacity={opacity} linewidth={linewidth} blending={THREE.AdditiveBlending} depthWrite={false} /></lineSegments>
+function Lines({ position, color, opacity, linewidth = 1, energy = false }) {
+  return <lineSegments><bufferGeometry><primitive attach="attributes-position" object={position} /><primitive attach="attributes-color" object={color} /></bufferGeometry><lineBasicMaterial vertexColors transparent opacity={opacity} linewidth={linewidth} blending={energy ? THREE.AdditiveBlending : THREE.NormalBlending} depthWrite={false} /></lineSegments>
 }
 
 function FocusConnections({ system }) {
@@ -217,11 +217,11 @@ export default function NeuralNetwork({ ready, boot }) {
   })
 
   return <group ref={group} scale={ready || booting ? 1 : .04}>
-    <Lines position={data.localPos} color={data.localCol} opacity={(hovered !== null || focusIndex >= 0 ? .15 : .39) + statePower * .07} />
-    <Lines position={data.systemPos} color={data.systemCol} opacity={(hovered !== null || focusIndex >= 0 ? .28 : .75) + statePower * .08} />
-    <Lines position={data.globalPos} color={data.globalCol} opacity={(hovered !== null || focusIndex >= 0 ? .38 : .9) + statePower * .08} linewidth={2} />
+    <Lines position={data.localPos} color={data.localCol} opacity={(hovered !== null || focusIndex >= 0 ? .26 : .66) + statePower * .05} />
+    <Lines position={data.systemPos} color={data.systemCol} opacity={(hovered !== null || focusIndex >= 0 ? .42 : .88) + statePower * .05} />
+    <Lines position={data.globalPos} color={data.globalCol} opacity={(hovered !== null || focusIndex >= 0 ? .48 : .82) + statePower * .06} linewidth={1} energy />
     {(focusIndex >= 0 || hovered !== null) && <FocusConnections system={data.systemData[focusIndex >= 0 ? focusIndex : hovered]} />}
-    <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.045} sizeAttenuation transparent opacity={.9} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+    <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.038} sizeAttenuation transparent opacity={.94} blending={THREE.NormalBlending} depthWrite={true} alphaTest={.08} /></points>
     <Signals data={data} power={statePower} /><PrimarySignal signal={signal} data={data} /><JonaCore intensity={statePower} />
     {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || (intensities[zone.name] || 0) > .5} audioLevel={(voice.status === 'LISTENING' && i === 0) || (voice.status === 'SPEAKING' && i === 7) ? voice.amplitude : 0} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={setHovered} onFocus={focusSystem} />)}
   </group>
