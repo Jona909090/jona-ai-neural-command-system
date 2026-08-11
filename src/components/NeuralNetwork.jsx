@@ -167,7 +167,7 @@ function Signals({ data, power }) {
 
 function PrimarySignal({ signal, data }) {
   const ref = useRef(), halo = useRef(), progress = useRef(0)
-  const resolve = name => name === 'CORE' ? new THREE.Vector3() : data.systemData[SYSTEMS.findIndex(s => s.name === name)]?.center
+  const resolve = name => name === 'CORE' ? new THREE.Vector3() : name === 'INPUT' ? new THREE.Vector3(0, -6.4, 1.4) : data.systemData[SYSTEMS.findIndex(s => s.name === name)]?.center
   useEffect(() => { progress.current = 0 }, [signal.step, signal.run])
   useFrame((_, delta) => {
     if (!ref.current || signal.step < 0 || signal.step >= signal.path.length - 1) { if (ref.current) ref.current.visible = false; return }
@@ -193,7 +193,7 @@ function FocusConnections({ system }) {
 
 export default function NeuralNetwork({ ready, boot }) {
   const group = useRef(), points = useRef(), [hovered, setHovered] = useState(null)
-  const data = useMemo(generateArchitecture, []), { pointer, camera, controls } = useThree(), { state, sequence, signal, focusedSystem, focusSystem } = useNeuralState()
+  const data = useMemo(generateArchitecture, []), { pointer, camera, controls } = useThree(), { state, sequence, signal, focusedSystem, focusSystem, intensities } = useNeuralState()
   const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
   const bootPower = boot?.phase === 'impact' ? 1.25 : boot?.phase === 'zones' ? .65 : 0
   const statePower = Math.max(bootPower, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .7 : state === 'LISTENING' ? .45 : 0)
@@ -221,6 +221,6 @@ export default function NeuralNetwork({ ready, boot }) {
     {(focusIndex >= 0 || hovered !== null) && <FocusConnections system={data.systemData[focusIndex >= 0 ? focusIndex : hovered]} />}
     <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.045} sizeAttenuation transparent opacity={.9} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
     <Signals data={data} power={statePower} /><PrimarySignal signal={signal} data={data} /><JonaCore intensity={statePower} />
-    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name)} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={setHovered} onFocus={focusSystem} />)}
+    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || (intensities[zone.name] || 0) > .5} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={setHovered} onFocus={focusSystem} />)}
   </group>
 }

@@ -10,7 +10,7 @@ export default function HUD() {
       <p>NEURAL COMMAND SYSTEM</p>
       <dl><div><dt>SYSTEM STATUS</dt><dd><i /> ONLINE</dd></div><div><dt>NEURAL ACTIVITY</dt><dd>{state}</dd></div></dl>
       <div className="activity-wave"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
-      <div className="metrics"><span>TOTAL NODES<b>1,287,450</b></span><span>ACTIVE CONNECTIONS<b>98,754,221</b></span><span>PROCESSING SPEED<b>2.48 PFLOPS</b></span><span>CORE TEMPERATURE<b>32.7°C</b></span></div>
+      <div className="metrics"><span>VISUAL NODES<b>1,287 <em>DEMO</em></b></span><span>VISUAL CONNECTIONS<b>9,875 <em>DEMO</em></b></span><span>ACTIVITY INDEX<b>82.4% <em>SIMULATED</em></b></span><span>CORE TEMPERATURE<b>32.7°C <em>UI</em></b></span></div>
       <div className="power-dial"><div><strong>100%</strong><small>OPTIMAL</small></div></div>
     </section>
     <section className="hud systems panel-corners">

@@ -11,6 +11,7 @@ export function NeuralStateProvider({ children }) {
   const [signal, setSignal] = useState({ path: [], step: -1, run: 0 })
   const [focusedSystem, setFocusedSystem] = useState(null)
   const [demoResponse, setDemoResponse] = useState('')
+  const [intensities, setIntensities] = useState({})
   const runId = useRef(0), timers = useRef([])
 
   const clearRun = () => { timers.current.forEach(clearTimeout); timers.current = [] }
@@ -18,6 +19,8 @@ export function NeuralStateProvider({ children }) {
   const activateSystem = useCallback(name => setSequence(current => current.includes(name) ? current : [...current, name]), [])
   const sendSignal = useCallback((from, to) => setSignal(current => ({ path: [from, to], step: 0, run: current.run + 1 })), [])
   const focusSystem = useCallback(name => setFocusedSystem(name), [])
+  const setSystemIntensity = useCallback((name, value) => setIntensities(current => ({ ...current, [name]: Math.max(0, Math.min(1, value)) })), [])
+  const resetActivity = useCallback(() => { setSequence([]); setIntensities({}); setSignal(current => ({ ...current, step: -1 })) }, [])
 
   const activate = useCallback(() => {
     clearRun(); const id = ++runId.current
@@ -31,5 +34,5 @@ export function NeuralStateProvider({ children }) {
     timers.current.push(setTimeout(() => { if (runId.current !== id) return; setState('IDLE'); setSequence([]); setSignal(s => ({ ...s, step: -1 })) }, 7100))
   }, [])
 
-  return <NeuralStateContext.Provider value={{ state, sequence, signal, focusedSystem, demoResponse, activate, activateSystem, sendSignal, setAIState, focusSystem }}>{children}</NeuralStateContext.Provider>
+  return <NeuralStateContext.Provider value={{ state, sequence, signal, focusedSystem, demoResponse, intensities, activate, activateSystem, sendSignal, setAIState, focusSystem, setSystemIntensity, resetActivity }}>{children}</NeuralStateContext.Provider>
 }

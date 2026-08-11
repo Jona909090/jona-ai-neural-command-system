@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useNeuralState } from '../state/NeuralStateContext'
+import { useConversation } from '../controllers/ConversationContext'
 
 export default function CommandInput() {
   const [value, setValue] = useState('')
-  const { state, activate, demoResponse } = useNeuralState()
-  const submit = e => { e.preventDefault(); if (value.trim() && state === 'IDLE') { activate(); setValue('') } }
-  return <><div className={`demo-response ${demoResponse ? 'visible' : ''}`}><strong>JONA AI</strong><span>{demoResponse}</span></div><form className="command" onSubmit={submit}>
+  const { state } = useNeuralState(), { busy, submit } = useConversation()
+  const send = async () => { const message = value; if (!message.trim() || busy) return; setValue(''); await submit(message) }
+  const onKeyDown = event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() } }
+  return <form className={`command ${busy ? 'busy' : ''}`} onSubmit={event => { event.preventDefault(); send() }}>
     <button type="button" className="mic" aria-label="Microphone"><span /></button>
-    <input value={value} onChange={e => setValue(e.target.value)} placeholder={state === 'IDLE' ? 'Ask JONA AI...' : `${state.toLowerCase()} neural request...`} />
+    <textarea rows="1" value={value} disabled={busy} onKeyDown={onKeyDown} onChange={event => setValue(event.target.value)} placeholder={busy ? `${state.toLowerCase()} neural request...` : 'Ask JONA AI...'} />
     <span className="command-state">{state}</span>
-    <button className="send" aria-label="Send">↗</button>
-  </form></>
+    <button className="send" disabled={busy || !value.trim()} aria-label="Send">↗</button>
+  </form>
 }
