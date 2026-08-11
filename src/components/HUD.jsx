@@ -2,8 +2,9 @@ import { ZONES } from '../config/neuralConfig'
 import { useNeuralState } from '../state/NeuralStateContext'
 
 export default function HUD() {
-  const { state } = useNeuralState()
+  const { state, focusedSystem, focusSystem } = useNeuralState()
   return <>
+    {focusedSystem && <div className="focus-mode"><span>{focusedSystem} SYSTEM</span><strong>FOCUS MODE</strong><button onClick={() => focusSystem(null)}>← BACK TO JONA CORE</button></div>}
     <section className="hud identity panel-corners">
       <div className="eyebrow">NEURAL INTERFACE / 01</div><h1>JONA <em>AI</em></h1>
       <p>NEURAL COMMAND SYSTEM</p>

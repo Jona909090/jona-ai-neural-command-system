@@ -14,7 +14,7 @@ export default function NeuralScene({ ready, boot }) {
       <ambientLight intensity={0.08} />
       <Suspense fallback={null}><NeuralNetwork ready={ready} boot={boot} /></Suspense>
       <Stars radius={35} depth={18} count={CONFIG.starCount} factor={1.7} saturation={0.35} fade speed={0.22} />
-      <OrbitControls enablePan={false} minDistance={13.5} maxDistance={21} rotateSpeed={0.32} zoomSpeed={0.4} dampingFactor={0.055} enableDamping />
+      <OrbitControls makeDefault enablePan={false} minDistance={3.8} maxDistance={21} rotateSpeed={0.32} zoomSpeed={0.4} dampingFactor={0.055} enableDamping />
       <EffectComposer multisampling={0}>
         <Bloom intensity={CONFIG.bloomIntensity} luminanceThreshold={CONFIG.bloomThreshold} mipmapBlur radius={0.7} />
         <Noise opacity={0.025} /><Vignette eskil={false} offset={0.2} darkness={0.8} />
