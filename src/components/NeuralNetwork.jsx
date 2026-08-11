@@ -194,7 +194,7 @@ function FocusConnections({ system }) {
 
 export default function NeuralNetwork({ ready, boot }) {
   const group = useRef(), points = useRef(), [hovered, setHovered] = useState(null)
-  const data = useMemo(generateArchitecture, []), { pointer, camera, controls } = useThree(), { state, sequence, signal, focusedSystem, focusSystem, intensities } = useNeuralState()
+  const data = useMemo(generateArchitecture, []), { pointer, camera, controls } = useThree(), { state, sequence, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem } = useNeuralState()
   const voice = useVoice()
   const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
   const bootPower = boot?.phase === 'impact' ? 1.25 : boot?.phase === 'zones' ? .65 : 0
@@ -223,6 +223,6 @@ export default function NeuralNetwork({ ready, boot }) {
     {(focusIndex >= 0 || hovered !== null) && <FocusConnections system={data.systemData[focusIndex >= 0 ? focusIndex : hovered]} />}
     <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.038} sizeAttenuation transparent opacity={.94} blending={THREE.NormalBlending} depthWrite={true} alphaTest={.08} /></points>
     <Signals data={data} power={statePower} /><PrimarySignal signal={signal} data={data} /><JonaCore intensity={statePower} />
-    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || (intensities[zone.name] || 0) > .5} audioLevel={(voice.status === 'LISTENING' && i === 0) || (voice.status === 'SPEAKING' && i === 7) ? voice.amplitude : 0} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={setHovered} onFocus={focusSystem} />)}
+    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || systemActivity[zone.name] > .55} audioLevel={(voice.status === 'LISTENING' && i === 0) || (voice.status === 'SPEAKING' && i === 7) ? voice.amplitude : 0} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={value => { setHovered(value); setHoveredSystem(value === null ? null : SYSTEMS[value].name) }} onFocus={focusSystem} />)}
   </group>
 }

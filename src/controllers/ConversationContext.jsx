@@ -16,6 +16,7 @@ export function ConversationProvider({ children }) {
 
   const submit = useCallback(async input => {
     const clean = input.trim(); if (!clean || busy) return false
+    neural.incrementRequests()
     const id = ++requestId.current, route = routeMessage(clean), userMessage = { id: `u-${id}`, role: 'user', text: clean }
     setBusy(true); setError(''); setMessages(current => [...current, userMessage]); neural.resetActivity(); neural.setAIState('LISTENING'); emit('jona:listening-start')
     neural.setSystemIntensity('LANGUAGE', 1); neural.setSystemIntensity('CONTEXT', .9); neural.activateSystem('LANGUAGE'); neural.sendSignal('INPUT', 'LANGUAGE')

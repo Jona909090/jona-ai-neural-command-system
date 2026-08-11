@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ZONES } from '../config/neuralConfig'
 import { neuralAudio } from '../audio/NeuralAudioEngine'
+import { useNeuralState } from '../state/NeuralStateContext'
 
 const timeline = [
   [900, 'dark'], [1650, 'spark'], [2200, 'pulse1'], [2820, 'pulse2'], [3380, 'pulse3'],
@@ -8,6 +9,7 @@ const timeline = [
 ]
 
 export default function StartupSequence({ onProgress, onComplete }) {
+  const { startSession } = useNeuralState()
   const [started, setStarted] = useState(false), [phase, setPhase] = useState('gate')
   const [zone, setZone] = useState(-1), [sound, setSound] = useState(true)
   const timers = useRef([]), finished = useRef(false)
@@ -26,7 +28,7 @@ export default function StartupSequence({ onProgress, onComplete }) {
   }
 
   const enter = () => {
-    setStarted(true); neuralAudio.start(); update('dark', 0)
+    setStarted(true); startSession(); neuralAudio.start(); update('dark', 0)
     timeline.forEach(([time, next], index) => timers.current.push(setTimeout(() => {
       update(next, index / timeline.length)
       if (next.startsWith('pulse')) neuralAudio.pulse(next === 'pulse3' ? 1.6 : 1)
