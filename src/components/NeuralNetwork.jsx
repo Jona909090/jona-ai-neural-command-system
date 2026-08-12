@@ -172,7 +172,7 @@ export default function NeuralNetwork({ ready, boot }) {
 
   return <group ref={system} scale={ready || booting ? 1 : .05}>
     <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
-    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null); voice.startSpeaking('Dobrodošli u Yona A I planetarni sistem.') }} />
+    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null); voice.startSpeaking('Dobro došli u Jona AI planetarni sistem.') }} />
     {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
     {ORBITAL_BODIES.map((config, index) => <OrbitPlanet key={config.id} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={(name, point) => { selectedPosition.current = point; focusSystem(name) }} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />

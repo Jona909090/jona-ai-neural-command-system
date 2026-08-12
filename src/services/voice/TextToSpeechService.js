@@ -3,12 +3,12 @@ export class BrowserTextToSpeechService {
   get supported() { return 'speechSynthesis' in window }
   speak(text, { volume = .85, onStart, onAmplitude, onComplete, onError }) {
     if (!this.supported || !text) { onComplete?.(); return false }
-    this.stop(); const utterance = new SpeechSynthesisUtterance(text); utterance.volume = volume; utterance.rate = .96; utterance.pitch = 1.12
+    this.stop(); const utterance = new SpeechSynthesisUtterance(text); utterance.volume = volume; utterance.rate = .78; utterance.pitch = 1.04
     const voices = speechSynthesis.getVoices()
-    const femaleName = /female|woman|zira|samantha|victoria|aria|jenny|ana|ivana|marija|milena|natasha|katja|helen/i
+    const femaleName = /female|woman|zira|samantha|victoria|aria|jenny|lana|ana|ivana|marija|milena|natasha|katja|helena|hazel|susan|linda|eva|sonia|sara|tessa/i
+    const maleName = /male|man|mark|david|george|guy|matej|nikola|stefan|daniel|james/i
     const regional = voices.filter(v => /^hr|^sr|^bs/i.test(v.lang))
-    const european = voices.filter(v => /^sl|^en-GB|^en-US/i.test(v.lang))
-    const selected = regional.find(v => femaleName.test(v.name)) || regional[0] || european.find(v => femaleName.test(v.name)) || european[0]
+    const selected = regional.find(v => femaleName.test(v.name)) || voices.find(v => femaleName.test(v.name)) || regional.find(v => !maleName.test(v.name))
     if (selected) { utterance.voice = selected; utterance.lang = selected.lang }
     utterance.onstart = () => { onStart?.(); this.timer = window.setInterval(() => onAmplitude?.(.2 + Math.random() * .65), 95) }
     utterance.onboundary = () => onAmplitude?.(.85)
