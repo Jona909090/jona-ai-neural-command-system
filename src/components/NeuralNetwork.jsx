@@ -17,7 +17,7 @@ const PLANETS = [
 ]
 
 const ROMAN = ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
-const ORBIT_COUNTS = PLANETS.map((_, index) => 4 * 2 ** index)
+const ORBIT_COUNTS = PLANETS.map((_, index) => index + 2)
 const ORBITAL_BODIES = PLANETS.map((planet, orbitIndex) => ({ ...planet, id: `${planet.name}-1`, variant: orbitIndex * 8, companion: false, slotIndex: 0 }))
 
 function seeded(seed) {
@@ -108,7 +108,7 @@ function OrbitRing({ radius }) {
 
 function OrbitColony({ config, orbitIndex, active }) {
   const mesh = useRef(), dummy = useMemo(() => new THREE.Object3D(), []), count = ORBIT_COUNTS[orbitIndex] - 1
-  const size = Math.max(.025, Math.min(config.size * .42, Math.PI * 2 * config.radius / ORBIT_COUNTS[orbitIndex] * .28))
+  const size = config.size * .72
   useFrame(({ clock }) => {
     if (!mesh.current) return
     for (let index = 0; index < count; index++) {
