@@ -30,6 +30,24 @@ function NeuralMiniMap({ activity }) {
   return <div className="neural-minimap"><span className="map-core" />{ZONES.map((zone, i) => <i key={zone.name} className={activity[zone.name] > .55 ? 'active' : ''} style={{ '--i': i, '--zone': zone.color }} title={zone.name} />)}</div>
 }
 
+function PlanetaryPyramid({ runtime }) {
+  const rows = [{ zone: { name: 'JONA AI', color: '#55ff76' }, count: 1 }, ...ZONES.map((zone, index) => ({ zone, count: ORBIT_COUNTS[index] }))]
+  const y = index => 7 + index * 11.2
+  const x = (item, count) => (item + 1) * 100 / (count + 1)
+  const connections = rows.slice(1).flatMap((row, rowIndex) => {
+    const parents = rows[rowIndex], childY = y(rowIndex + 1), parentY = y(rowIndex)
+    return Array.from({ length: row.count }, (_, child) => {
+      const parent = Math.min(parents.count - 1, Math.floor(child * parents.count / row.count))
+      return <line key={`${rowIndex}-${child}`} x1={`${x(parent, parents.count)}%`} y1={`${parentY + 2}%`} x2={`${x(child, row.count)}%`} y2={`${childY - 2}%`} stroke={row.zone.color} />
+    })
+  })
+  const select = name => {
+    if (name === 'JONA AI') { runtime.focusSystem(null); runtime.setPyramidOpen(false); return }
+    runtime.activateSystem(name); runtime.setSystemIntensity(name, 1); runtime.focusSystem(name); runtime.setPyramidOpen(false)
+  }
+  return <div className="pyramid-window tree-window"><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>44 FUNCTIONAL NODES · 8 ORBITAL LEVELS · SELECT A PLANET</p><div className="planet-tree"><svg aria-hidden="true" preserveAspectRatio="none">{connections}</svg>{rows.map((row, rowIndex) => <div className="tree-row" key={row.zone.name} style={{ '--row-y': `${y(rowIndex)}%` }}>{Array.from({ length: row.count }, (_, item) => <button key={item} onClick={() => select(row.zone.name)} style={{ '--node-color': row.zone.color }}><i /><span>{row.zone.name === 'JONA AI' ? 'JONA AI' : `${row.zone.name} ${String(item + 1).padStart(2, '0')}`}</span><small>{rowIndex ? `ORBIT ${rowIndex}` : 'CORE'}</small></button>)}</div>)}</div><small>Svaka kartica predstavlja jednu planetu i aktivira njen orbitalni sistem.</small></div>
+}
+
 export default function HUD() {
   const runtime = useNeuralState(), voice = useVoice(), date = new Date(runtime.runtimeNow)
   const [scanning, setScanning] = useState(false), [clock24, setClock24] = useState(true), [hudExpanded, setHudExpanded] = useState(true)
@@ -52,7 +70,7 @@ export default function HUD() {
   const centerCore = () => { runtime.focusSystem(null); runtime.setNearbySystem(null) }
   useEffect(() => () => scanTimers.current.forEach(clearTimeout), [])
   return <>
-    {runtime.pyramidOpen && <div className="pyramid-window"><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>ORBITAL HIERARCHY · 44 PLANETS · PROGRESSIVE STRUCTURE</p><div className="pyramid-levels">{ZONES.map((zone, index) => <div className="pyramid-level" key={zone.name} style={{ '--level-color': zone.color, '--level-width': `${30 + index * 9}%` }}><span>{index + 1}</span><div>{Array.from({ length: ORBIT_COUNTS[index] }, (_, dot) => <i key={dot} />)}</div><strong>{zone.name}<b>{ORBIT_COUNTS[index]} PLANETS</b></strong></div>)}</div><small>Svaki sljedeći orbitalni nivo sadrži jednu planetu više.</small></div>}
+    {runtime.pyramidOpen && <PlanetaryPyramid runtime={runtime} />}
     {focus && <div className="focus-mode"><span>{focus} SYSTEM</span><strong>FOCUS MODE</strong><button onClick={() => runtime.focusSystem(null)}>← BACK TO JONA CORE</button></div>}
     <section className="hud identity live-status panel-corners">
       <div className="eyebrow">LIVE SYSTEM INTELLIGENCE</div><h1>JONA <em>AI</em></h1><p>NEURAL COMMAND SYSTEM</p>
