@@ -12,6 +12,8 @@ const PLANETS = [
   { name: 'CREATIVE', label: 'CREATIVE', color: '#d7a72b', dark: '#6b3511', radius: 6.15, size: .46, speed: .0115, phase: 3.25, surface: 'gas' },
   { name: 'PLANNING', label: 'PLANNING', color: '#8246bd', dark: '#28133f', radius: 7.15, size: .4, speed: .0095, phase: 4.28, surface: 'storm' },
   { name: 'RESPONSE', label: 'RESPONSE', color: '#3fbfae', dark: '#0b4350', radius: 8.15, size: .44, speed: .0075, phase: 5.3, surface: 'ice' },
+  { name: 'VISION', label: 'VISION', color: '#e9782d', dark: '#50210c', radius: 9.15, size: .39, speed: .0062, phase: .72, surface: 'volcanic' },
+  { name: 'CONTEXT', label: 'CONTEXT', color: '#e83c9f', dark: '#4b0c35', radius: 10.15, size: .43, speed: .0051, phase: 2.78, surface: 'cloud' },
 ]
 
 function seeded(seed) {
@@ -25,7 +27,7 @@ function planetTexture(config, index) {
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height); gradient.addColorStop(0, config.dark); gradient.addColorStop(.48, config.color); gradient.addColorStop(1, config.dark)
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  if (config.surface === 'gas' || config.surface === 'storm') {
+  if (config.surface === 'gas' || config.surface === 'storm' || config.surface === 'cloud') {
     for (let y = 0; y < canvas.height; y += 9 + Math.floor(random() * 11)) {
       ctx.globalAlpha = .12 + random() * .25; ctx.fillStyle = random() > .5 ? '#fff4bd' : config.dark
       ctx.beginPath(); ctx.moveTo(0, y)
@@ -47,6 +49,10 @@ function planetTexture(config, index) {
   if (config.surface === 'ice') {
     ctx.globalAlpha = .38; ctx.strokeStyle = '#c8ffff'; ctx.lineWidth = 2
     for (let i = 0; i < 45; i++) { const x = random() * canvas.width, y = random() * canvas.height; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + random() * 90 - 45, y + random() * 60 - 30); ctx.stroke() }
+  }
+  if (config.surface === 'volcanic') {
+    ctx.globalAlpha = .7; ctx.strokeStyle = '#ffb12e'; ctx.lineWidth = 2
+    for (let i = 0; i < 55; i++) { const x = random() * canvas.width, y = random() * canvas.height; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + random() * 70 - 35, y + random() * 55 - 28); ctx.stroke() }
   }
   ctx.globalAlpha = 1
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8; return texture
@@ -143,7 +149,7 @@ export default function NeuralNetwork({ ready, boot }) {
     system.current.rotation.z = THREE.MathUtils.lerp(system.current.rotation.z, -pointer.x * .025, .02)
     if (ready && controls) {
       const target = focusedSystem && focusPosition ? focusPosition : new THREE.Vector3()
-      const cameraTarget = focusedSystem && focusPosition ? focusPosition.clone().add(new THREE.Vector3(0, .2, 3.4)) : new THREE.Vector3(0, 0, 17)
+      const cameraTarget = focusedSystem && focusPosition ? focusPosition.clone().add(new THREE.Vector3(0, .2, 3.4)) : new THREE.Vector3(0, 0, 24)
       controls.target.lerp(target, .025); camera.position.lerp(cameraTarget, .018); controls.update()
     }
   })
