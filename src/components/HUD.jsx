@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { ZONES } from '../config/neuralConfig'
 import { AI_MODE } from '../config/aiConfig'
 import { useNeuralState } from '../state/NeuralStateContext'
@@ -30,11 +31,25 @@ function NeuralMiniMap({ activity }) {
 
 export default function HUD() {
   const runtime = useNeuralState(), voice = useVoice(), date = new Date(runtime.runtimeNow)
+  const [scanning, setScanning] = useState(false), [clock24, setClock24] = useState(true), [hudExpanded, setHudExpanded] = useState(true)
+  const scanTimers = useRef([])
   const focus = runtime.focusedSystem, details = runtime.hoveredSystem
   const nearby = runtime.nearbySystem, planetInfo = nearby ? PLANET_INFO[nearby] : null
   const status = runtime.state === 'ERROR' ? 'DEGRADED' : 'ONLINE'
   const conversation = runtime.state === 'IDLE' ? 'READY' : runtime.state
   const routeStep = runtime.signal.step
+  const runScan = () => {
+    if (scanning) return
+    setScanning(true); runtime.resetActivity()
+    ZONES.forEach((zone, index) => scanTimers.current.push(setTimeout(() => {
+      runtime.setSystemIntensity(zone.name, 1)
+      if (index) runtime.sendSignal(ZONES[index - 1].name, zone.name)
+      scanTimers.current.push(setTimeout(() => runtime.setSystemIntensity(zone.name, .16), 520))
+    }, index * 330)))
+    scanTimers.current.push(setTimeout(() => { runtime.resetActivity(); setScanning(false) }, ZONES.length * 330 + 650))
+  }
+  const centerCore = () => { runtime.focusSystem(null); runtime.setNearbySystem(null) }
+  useEffect(() => () => scanTimers.current.forEach(clearTimeout), [])
   return <>
     {focus && <div className="focus-mode"><span>{focus} SYSTEM</span><strong>FOCUS MODE</strong><button onClick={() => runtime.focusSystem(null)}>← BACK TO JONA CORE</button></div>}
     <section className="hud identity live-status panel-corners">
@@ -42,15 +57,19 @@ export default function HUD() {
       <div className="status-grid"><span>SYSTEM<b className={status === 'ONLINE' ? 'ok' : 'warn'}>{status}</b></span><span>CORE STATUS<b>{runtime.state === 'PROCESSING' ? 'ACTIVE' : 'STABLE'}</b></span><span>NEURAL ACTIVITY<b>{runtime.state}</b></span><span>VOICE SYSTEM<b>{voice.status}</b></span><span>CONVERSATION<b>{conversation}</b></span><span>CONNECTION<b>LOCAL / {AI_MODE}</b></span></div>
       <div className="core-load"><div><span>CORE LOAD <em>VISUAL</em></span><b>{runtime.coreLoad}%</b></div><i><u style={{ width: `${runtime.coreLoad}%` }} /></i></div>
       <div className="runtime-row"><span>SIGNAL DENSITY<b>{runtime.signalDensity}</b></span><span>SYSTEM ENERGY<b>{runtime.systemEnergy}</b></span></div>
+      <div className="hud-actions"><button className={scanning ? 'active' : ''} onClick={runScan} disabled={scanning}>{scanning ? 'SCANNING...' : 'SYSTEM SCAN'}</button><button onClick={centerCore}>CENTER CORE</button></div>
     </section>
 
-    <section className="hud systems intelligence-panel panel-corners">
-      <div className="clock"><b>{date.toLocaleTimeString('en-GB')}</b><span>{date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}</span></div>
+    <section className={`hud systems intelligence-panel panel-corners ${hudExpanded ? '' : 'collapsed'}`}>
+      <div className="clock"><button onClick={() => setClock24(value => !value)} title="Promijeni format vremena"><b>{date.toLocaleTimeString(clock24 ? 'en-GB' : 'en-US')}</b><small>{clock24 ? '24H' : '12H'}</small></button><span>{date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}</span></div>
+      <div className="hud-panel-tools"><button onClick={() => setHudExpanded(value => !value)}>{hudExpanded ? 'MINIMIZE DATA' : 'EXPAND DATA'}</button><button onClick={runScan} disabled={scanning}>{scanning ? 'SCAN ACTIVE' : 'RUN SCAN'}</button></div>
+      <div className="hud-panel-body">
       <div className="session-data"><span>SESSION<b>{fmtTime(runtime.sessionSeconds)}</b></span><span>REQUESTS<b>{String(runtime.requestCount).padStart(3, '0')}</b></span><span>CURRENT MODE<b className={`mode-${runtime.state.toLowerCase()}`}>{runtime.state}</b></span></div>
       {focus ? <div className="focus-systems"><div className="eyebrow">{focus} MATRIX / SUBSYSTEMS</div>{SUBSYSTEMS[focus].map((name, i) => <div key={name}><span>{name}</span><ActivityMeter value={Math.max(.18, runtime.systemActivity[focus] - i * .07)} /></div>)}</div> : <div className="activity-systems"><div className="eyebrow">LIVE NEURAL ACTIVITY</div>{ZONES.map(zone => <div key={zone.name}><span>{zone.name}</span><ActivityMeter value={runtime.systemActivity[zone.name]} /></div>)}</div>}
       <div className="route-panel"><span>ACTIVE SIGNAL ROUTE</span><div>{runtime.activeRoute.length ? runtime.activeRoute.map((name, i) => <b key={`${name}-${i}`} className={i === routeStep || i === routeStep + 1 ? 'active' : i < routeStep ? 'passed' : ''}>{name}{i < runtime.activeRoute.length - 1 && <i>→</i>}</b>) : <em>AMBIENT NEURAL FLOW</em>}</div></div>
       <div className="map-row"><NeuralMiniMap activity={runtime.systemActivity} /><div><span>CORE</span><b>{runtime.coreLoad}%</b><small>RUNTIME ACTIVITY MAP</small></div></div>
       <details className="voice-settings"><summary>VOICE SETTINGS</summary><label><span>VOICE</span><button onClick={() => voice.updateSetting('voiceOn', !voice.settings.voiceOn)}>{voice.settings.voiceOn ? 'ON' : 'OFF'}</button></label><label><span>AUTO SPEAK</span><button onClick={() => voice.updateSetting('autoSpeak', !voice.settings.autoSpeak)}>{voice.settings.autoSpeak ? 'ON' : 'OFF'}</button></label><label><span>MIC SENSITIVITY</span><input type="range" min="0.1" max="1" step="0.05" value={voice.settings.sensitivity} onChange={e => voice.updateSetting('sensitivity', Number(e.target.value))} /></label><label><span>RESPONSE VOLUME</span><input type="range" min="0" max="1" step="0.05" value={voice.settings.volume} onChange={e => voice.updateSetting('volume', Number(e.target.value))} /></label></details>
+      </div>
     </section>
     <aside className={`planet-intel-card ${nearby ? 'visible' : ''}`}>
       {planetInfo && <><div className="planet-arrival"><i /> ARRIVAL CONFIRMED</div><div className="eyebrow">CURRENT LOCATION</div><h3>{nearby} <em>PLANET</em></h3><strong>{planetInfo.type}</strong><p>{planetInfo.text}</p><div className="planet-contents"><span>UNUTAR PLANETE</span>{planetInfo.inside.map(item => <b key={item}>{item}</b>)}</div><small>ORBITAL LINK · {CONNECTIONS[nearby]}</small></>}
