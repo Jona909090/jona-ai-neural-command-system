@@ -93,21 +93,21 @@ function Atmosphere({ color = '#35ff69', scale = 1.08 }) {
   return <mesh scale={scale}><sphereGeometry args={[1, 48, 48]} /><meshBasicMaterial color={color} transparent opacity={.075} side={THREE.BackSide} blending={THREE.AdditiveBlending} /></mesh>
 }
 
-function JonaEarth({ power }) {
-  const planet = useRef(), clouds = useRef(), texture = useMemo(earthTexture, [])
+function JonaEarth({ power, onActivate }) {
+  const planet = useRef(), clouds = useRef(), texture = useMemo(earthTexture, []), [hovered, setHovered] = useState(false)
   useFrame(({ clock }, delta) => {
     planet.current.rotation.y += delta * .075; clouds.current.rotation.y += delta * .105
     const pulse = 1 + Math.sin(clock.elapsedTime * 1.5) * .012 + power * .018; planet.current.scale.setScalar(pulse)
   })
   return <group>
     <group ref={planet}>
-      <mesh castShadow receiveShadow><sphereGeometry args={[1.65, 96, 96]} /><meshStandardMaterial map={texture} color="#76ff88" roughness={.58} metalness={.08} emissive="#0cff3d" emissiveIntensity={.18 + power * .2} /></mesh>
+      <mesh castShadow receiveShadow onClick={event => { event.stopPropagation(); onActivate() }} onPointerOver={event => { event.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default' }}><sphereGeometry args={[1.65, 96, 96]} /><meshStandardMaterial map={texture} color="#76ff88" roughness={.58} metalness={.08} emissive="#0cff3d" emissiveIntensity={.18 + power * .2 + (hovered ? .18 : 0)} /></mesh>
       <mesh ref={clouds} scale={1.006}><sphereGeometry args={[1.65, 48, 48]} /><meshBasicMaterial color="#b8ffc3" wireframe transparent opacity={.085} /></mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[1.78, .013, 5, 128]} /><meshBasicMaterial color="#3cff6a" transparent opacity={.5} /></mesh>
       <Atmosphere scale={1.82} />
     </group>
     <pointLight color="#37ff67" intensity={3.2 + power * 2.2} distance={8} />
-    <Html center distanceFactor={9} className="planet-core-label"><strong>JONA AI</strong><span>WORLD CORE</span></Html>
+    <Html center distanceFactor={9} className={`planet-core-label ${hovered ? 'ready' : ''}`}><strong>JONA AI</strong><span>{hovered ? 'CLICK TO SPEAK' : 'WORLD CORE'}</span></Html>
   </group>
 }
 
@@ -172,7 +172,7 @@ export default function NeuralNetwork({ ready, boot }) {
 
   return <group ref={system} scale={ready || booting ? 1 : .05}>
     <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
-    <JonaEarth power={power} />
+    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null); voice.startSpeaking('Pozdrav. Ja sam Jona AI. Planetarni sistem je aktivan i spreman. Kako mogu da ti pomognem?') }} />
     {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
     {ORBITAL_BODIES.map((config, index) => <OrbitPlanet key={config.id} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={(name, point) => { selectedPosition.current = point; focusSystem(name) }} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />

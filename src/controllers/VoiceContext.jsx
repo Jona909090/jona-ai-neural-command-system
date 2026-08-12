@@ -16,6 +16,11 @@ export function VoiceProvider({ children }) {
   const conversation = useConversation(), neural = useNeuralState()
 
   const stopSpeaking = useCallback(() => { TextToSpeechService.stop(); setAmplitude(0); if (status === 'SPEAKING') { setStatus('READY'); neural.setAIState('IDLE'); neural.resetActivity() } }, [status, neural])
+  const startSpeaking = useCallback(text => {
+    if (!settings.voiceOn) { setNotice('VOICE SYSTEM IS OFF'); return false }
+    TextToSpeechService.stop(); setNotice(''); setStatus('SPEAKING'); neural.setAIState('RESPONDING'); neural.activateSystem('RESPONSE'); neural.setSystemIntensity('RESPONSE', 1)
+    return TextToSpeechService.speak(text, { volume: settings.volume, onStart: () => window.dispatchEvent(new CustomEvent('jona:speaking-start')), onAmplitude: setAmplitude, onComplete: () => { setAmplitude(0); setStatus('READY'); neural.setAIState('IDLE'); neural.resetActivity(); window.dispatchEvent(new CustomEvent('jona:speaking-complete')) }, onError: () => { setNotice('VOICE OUTPUT UNAVAILABLE'); setStatus('READY'); neural.setAIState('IDLE') } })
+  }, [settings.voiceOn, settings.volume, neural])
   const cancelListening = useCallback(async () => { if (!listening.current) return; stopping.current = true; listening.current = false; SpeechToTextService.cancel(); await mic.current.stop(); transcriptRef.current = ''; setTranscript(''); setAmplitude(0); setStatus('READY'); neural.setAIState('IDLE'); neural.resetActivity(); setTimeout(() => { stopping.current = false }, 0) }, [neural])
   const stopListening = useCallback(async (send = true) => {
     if (!listening.current || stopping.current) return; stopping.current = true; listening.current = false; SpeechToTextService.stop(); await mic.current.stop(); const text = transcriptRef.current.trim(); setAmplitude(0); setStatus(text && send ? 'PROCESSING' : 'READY'); setTranscript('')
@@ -45,5 +50,5 @@ export function VoiceProvider({ children }) {
   useEffect(() => () => { SpeechToTextService.cancel(); mic.current.stop(); TextToSpeechService.stop() }, [])
 
   const updateSetting = (name, value) => { if (name === 'voiceOn' && !value) stopSpeaking(); setSettings(current => ({ ...current, [name]: value })) }
-  return <VoiceContext.Provider value={{ status, transcript, amplitude, notice, settings, startListening, stopListening, cancelListening, startSpeaking: TextToSpeechService.speak.bind(TextToSpeechService), stopSpeaking, updateSetting }}>{children}</VoiceContext.Provider>
+  return <VoiceContext.Provider value={{ status, transcript, amplitude, notice, settings, startListening, stopListening, cancelListening, startSpeaking, stopSpeaking, updateSetting }}>{children}</VoiceContext.Provider>
 }
