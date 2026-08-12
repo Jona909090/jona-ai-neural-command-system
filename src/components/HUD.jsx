@@ -33,14 +33,13 @@ function NeuralMiniMap({ activity }) {
 function PlanetaryPyramid({ runtime }) {
   const rows = [{ zone: { name: 'JONA AI', color: '#55ff76' }, count: 1 }, ...ZONES.map((zone, index) => ({ zone, count: ORBIT_COUNTS[index] }))]
   const y = index => 7 + index * 11.2
-  const x = (item, count) => (item + 1) * 100 / (count + 1)
+  const x = (item, count) => 50 + (item - (count - 1) / 2) * 10.4
   const branches = rows.slice(1).flatMap((row, rowIndex) => {
     const parents = rows[rowIndex], childY = y(rowIndex + 1), parentY = y(rowIndex)
-    return Array.from({ length: row.count }, (_, child) => {
-      const parent = Math.min(parents.count - 1, Math.floor(child * parents.count / row.count))
-      const path = `M ${x(parent, parents.count)} ${parentY} V ${(parentY + childY) / 2} H ${x(child, row.count)} V ${childY}`
-      return <g key={`branch-${rowIndex}-${child}`}><path className="tree-wire" d={path} /><path className="tree-current" d={path} style={{ '--delay': `${-(rowIndex * .19 + child * .08)}s` }} /></g>
-    })
+    return Array.from({ length: parents.count }, (_, parent) => [parent, parent + 1].map(child => {
+      const path = `M ${x(parent, parents.count)} ${parentY} L ${x(child, row.count)} ${childY}`
+      return <g key={`branch-${rowIndex}-${parent}-${child}`}><path className="tree-wire" d={path} /><path className="tree-current" d={path} style={{ '--delay': `${-(rowIndex * .19 + parent * .08 + child * .04)}s` }} /></g>
+    })).flat()
   })
   const rails = rows.slice(1).flatMap((row, rowIndex) => Array.from({ length: row.count - 1 }, (_, item) => {
     const path = `M ${x(item, row.count)} ${y(rowIndex + 1)} H ${x(item + 1, row.count)}`
@@ -50,7 +49,7 @@ function PlanetaryPyramid({ runtime }) {
     if (name === 'JONA AI') { runtime.focusSystem(null); runtime.setPyramidOpen(false); return }
     runtime.activateSystem(name); runtime.setSystemIntensity(name, 1); runtime.focusSystem(name); runtime.setPyramidOpen(false)
   }
-  return <div className="pyramid-window tree-window"><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>44 FUNCTIONAL NODES · 8 ORBITAL LEVELS · SELECT A PLANET</p><div className="planet-tree"><svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none"><defs><filter id="tree-glow"><feGaussianBlur stdDeviation=".42" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>{branches}{rails}</svg>{rows.map((row, rowIndex) => <div className="tree-row" key={row.zone.name} style={{ '--row-y': `${y(rowIndex)}%` }}>{Array.from({ length: row.count }, (_, item) => <button key={item} onClick={() => select(row.zone.name)} style={{ '--node-color': row.zone.color }}><i /><span>{row.zone.name === 'JONA AI' ? 'JONA AI' : `${row.zone.name} ${String(item + 1).padStart(2, '0')}`}</span><small>{rowIndex ? `ORBIT ${rowIndex}` : 'CORE'}</small></button>)}</div>)}</div><small>Svaka kartica predstavlja jednu planetu i aktivira njen orbitalni sistem.</small></div>
+  return <div className="pyramid-window tree-window"><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>44 FUNCTIONAL NODES · 8 ORBITAL LEVELS · SELECT A PLANET</p><div className="planet-tree"><svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none"><defs><filter id="tree-glow"><feGaussianBlur stdDeviation=".42" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>{branches}{rails}</svg>{rows.map((row, rowIndex) => <div className="tree-row" key={row.zone.name} style={{ '--row-y': `${y(rowIndex)}%` }}>{Array.from({ length: row.count }, (_, item) => <button key={item} onClick={() => select(row.zone.name)} style={{ '--node-color': row.zone.color, '--node-x': `${x(item, row.count)}%` }}><i /><span>{row.zone.name === 'JONA AI' ? 'JONA AI' : `${row.zone.name} ${String(item + 1).padStart(2, '0')}`}</span><small>{rowIndex ? `ORBIT ${rowIndex}` : 'CORE'}</small></button>)}</div>)}</div><small>Svaka kartica predstavlja jednu planetu i aktivira njen orbitalni sistem.</small></div>
 }
 
 export default function HUD() {
