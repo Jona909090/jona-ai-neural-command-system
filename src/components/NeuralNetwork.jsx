@@ -16,10 +16,15 @@ const PLANETS = [
   { name: 'CONTEXT', label: 'CONTEXT', color: '#e83c9f', dark: '#4b0c35', radius: 10.15, size: .43, speed: .0051, phase: 2.78, surface: 'cloud' },
 ]
 
-const ORBITAL_BODIES = PLANETS.flatMap((planet, index) => [
-  { ...planet, id: `${planet.name}-A`, variant: index * 2, companion: false },
-  { ...planet, id: `${planet.name}-B`, label: `${planet.label} II`, phase: planet.phase + Math.PI, variant: index * 2 + 1, companion: true },
-])
+const ORBITAL_BODIES = PLANETS.flatMap((planet, orbitIndex) => ['A', 'B', 'C', 'D'].map((slot, slotIndex) => ({
+  ...planet,
+  id: `${planet.name}-${slot}`,
+  label: slotIndex ? `${planet.label} ${['', 'II', 'III', 'IV'][slotIndex]}` : planet.label,
+  phase: planet.phase + slotIndex * Math.PI / 2,
+  variant: orbitIndex * 4 + slotIndex,
+  companion: slotIndex > 0,
+  slotIndex,
+})))
 
 function seeded(seed) {
   let value = seed * 9301 + 49297
@@ -112,7 +117,7 @@ function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFo
   useFrame(({ clock }, delta) => {
     const angle = config.phase + clock.elapsedTime * config.speed
     pivot.current.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius, 0)
-    body.current.rotation.y += delta * (.045 + (index % 8) * .006) * (config.companion ? -.82 : 1); body.current.rotation.x += delta * .005
+    body.current.rotation.y += delta * (.04 + (index % 8) * .005) * (config.slotIndex % 2 ? -.82 : 1); body.current.rotation.x += delta * (.004 + config.slotIndex * .0007)
     const pulse = 1 + (active ? .08 : .015) * Math.sin(clock.elapsedTime * (2 + index * .2)) + voiceLevel * .18 + (hovered ? .12 : 0)
     body.current.scale.setScalar(pulse); pivot.current.getWorldPosition(world); if (!config.companion) registerPosition(config.name, world)
   })
@@ -126,7 +131,7 @@ function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFo
       {index === 3 && <mesh rotation={[1.15, .2, 0]}><torusGeometry args={[config.size * 1.45, .025, 6, 80]} /><meshBasicMaterial color={config.color} transparent opacity={.72} /></mesh>}
     </group>
     <pointLight color={config.color} intensity={active || hovered ? 3.8 : .75} distance={2.4} />
-    <Html position={[config.size + .24, config.size * .3, 0]} distanceFactor={12} className={`planet-label ${active ? 'active' : ''}`}><strong>{config.label}</strong><span>{focused ? 'FOCUS' : active ? 'ACTIVE' : 'ORBITAL SYSTEM'}</span></Html>
+    {(!config.companion || hovered) && <Html position={[config.size + .24, config.size * .3, 0]} distanceFactor={12} className={`planet-label ${active ? 'active' : ''}`}><strong>{config.label}</strong><span>{focused ? 'FOCUS' : active ? 'ACTIVE' : 'ORBITAL SYSTEM'}</span></Html>}
   </group>
 }
 
