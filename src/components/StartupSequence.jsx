@@ -28,9 +28,9 @@ function MatrixCurtain() {
         columns.forEach((y, index) => {
           const character = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
           const bright = Math.random() > .91
-          context.fillStyle = bright ? '#d9ffe0' : Math.random() > .72 ? '#64ff82' : '#12b83d'
+          context.fillStyle = bright ? '#effff1' : Math.random() > .68 ? '#7dff94' : '#18d84a'
           context.shadowColor = '#28ff5c'
-          context.shadowBlur = bright ? 12 : 4
+          context.shadowBlur = bright ? 22 : 9
           context.fillText(character, index * 18, y * 18)
           columns[index] = y * 18 > innerHeight && Math.random() > .965 ? Math.random() * -22 : y + .72 + Math.random() * .48
         })
