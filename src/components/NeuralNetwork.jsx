@@ -1,228 +1,121 @@
+import { Html, Line } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { CONFIG, ZONES } from '../config/neuralConfig'
 import { useNeuralState } from '../state/NeuralStateContext'
 import { useVoice } from '../controllers/VoiceContext'
 
-const rand = (a, b) => a + Math.random() * (b - a)
-const CORE_COLOR = new THREE.Color('#69eaff')
-const LABELS = ['LANGUAGE CENTER', 'MEMORY MATRIX', 'LOGIC ENGINE', 'VISION ARRAY', 'CREATIVE UNIT', 'PLANNING NETWORK', 'CONTEXT SYSTEM', 'RESPONSE GENERATOR']
-
-// Deliberately asymmetric, wide and deep — a system of systems, not a sphere.
-const SYSTEMS = [
-  { ...ZONES[0], color: '#ff2d9b', pos: [-5.7, 3.1, 1.0] },
-  { ...ZONES[1], color: '#58ed4f', pos: [-6.2, -2.25, -1.5] },
-  { ...ZONES[2], color: '#238cff', pos: [-1.8, 4.8, -2.0] },
-  { ...ZONES[3], color: '#13e4ff', pos: [3.2, 4.25, 1.3] },
-  { ...ZONES[4], color: '#ff8a19', pos: [6.15, 1.2, -1.1] },
-  { ...ZONES[5], color: '#a84cff', pos: [-2.9, -4.55, 1.85] },
-  { ...ZONES[6], color: '#ffd234', pos: [2.25, -4.35, -2.2] },
-  { ...ZONES[7], color: '#27f0c1', pos: [6.0, -2.9, 1.75] },
+const PLANETS = [
+  { name: 'LANGUAGE', label: 'LANGUAGE', color: '#9ca3ad', radius: 3.35, size: .43, speed: .082, tilt: .18, phase: .3 },
+  { name: 'MEMORY', label: 'MEMORY', color: '#ff3038', radius: 4.15, size: .55, speed: .062, tilt: -.27, phase: 2.25 },
+  { name: 'LOGIC', label: 'LOGIC', color: '#208dff', radius: 5.05, size: .48, speed: .049, tilt: .34, phase: 4.35 },
+  { name: 'CREATIVE', label: 'CREATIVE', color: '#ffe42f', radius: 5.85, size: .62, speed: .039, tilt: -.16, phase: 1.35 },
+  { name: 'PLANNING', label: 'PLANNING', color: '#a94cff', radius: 6.65, size: .5, speed: .032, tilt: .26, phase: 3.22 },
+  { name: 'RESPONSE', label: 'RESPONSE', color: '#19e8c5', radius: 7.35, size: .58, speed: .027, tilt: -.32, phase: 5.25 },
 ]
 
-const GLOBAL_LINKS = [[0, 6], [6, 1], [1, 2], [2, 5], [5, 7], [4, 1], [3, 6], [0, 2], [3, 4], [4, 7], [5, 6]]
-const FLOW_ROUTE = [0, 6, 1, 2, -1, 7]
-const SUB_CORE_NAMES = {
-  LANGUAGE: ['INPUT', 'SEMANTICS', 'INTENT', 'TRANSLATION', 'COMPOSITION', 'OUTPUT', 'LEXICON', 'TONE'],
-  MEMORY: ['SHORT TERM', 'LONG TERM', 'CONTEXT', 'PROJECTS', 'KNOWLEDGE', 'PATTERNS', 'RECALL', 'INDEX'],
-  LOGIC: ['ANALYSIS', 'REASONING', 'VALIDATION', 'DECISION', 'CALCULATION', 'INFERENCE', 'RULES'],
-  VISION: ['OBJECTS', 'STRUCTURE', 'DETAIL', 'SPATIAL', 'INTERPRETATION', 'DEPTH', 'MOTION'],
-  CREATIVE: ['IDEAS', 'DESIGN', 'WRITING', 'VARIATION', 'IMAGINATION', 'STYLE', 'SYNTHESIS'],
-  PLANNING: ['GOALS', 'TASKS', 'PRIORITIES', 'SEQUENCE', 'EXECUTION', 'RESOURCES', 'TIMING'],
-  CONTEXT: ['CURRENT INPUT', 'SESSION', 'HISTORY', 'RELATIONSHIPS', 'RELEVANCE', 'SCOPE', 'REFERENCES'],
-  RESPONSE: ['COMPOSITION', 'CHECK', 'FORMAT', 'VOICE', 'OUTPUT', 'QUALITY', 'DELIVERY'],
+function earthTexture() {
+  const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512
+  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#03130a'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.strokeStyle = '#0c4823'; ctx.lineWidth = 1
+  for (let x = 0; x <= 1024; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke() }
+  for (let y = 0; y <= 512; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke() }
+  ctx.fillStyle = '#43ff65'; ctx.shadowColor = '#31ff61'; ctx.shadowBlur = 14
+  const land = points => { ctx.beginPath(); points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill() }
+  land([[120,92],[180,58],[244,72],[278,118],[251,160],[212,174],[195,228],[146,205],[112,151]])
+  land([[226,240],[271,252],[294,306],[276,382],[244,451],[216,401],[198,332]])
+  land([[436,105],[502,79],[584,94],[641,128],[618,174],[555,176],[529,215],[466,197],[421,153]])
+  land([[500,207],[565,195],[608,245],[592,326],[544,406],[498,372],[474,297]])
+  land([[650,126],[730,93],[846,111],[904,163],[862,221],[783,211],[744,253],[680,210]])
+  land([[806,330],[868,315],[911,350],[889,401],[828,411],[792,372]])
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8; return texture
 }
 
-function addVertex(store, a, b, ca, cb = ca) {
-  store.positions.push(a.x, a.y, a.z, b.x, b.y, b.z)
-  store.colors.push(ca.r, ca.g, ca.b, cb.r, cb.g, cb.b)
+function Atmosphere({ color = '#35ff69', scale = 1.08 }) {
+  return <mesh scale={scale}><sphereGeometry args={[1, 48, 48]} /><meshBasicMaterial color={color} transparent opacity={.075} side={THREE.BackSide} blending={THREE.AdditiveBlending} /></mesh>
 }
 
-function generateArchitecture() {
-  const nodes = { positions: [], colors: [], sizes: [] }
-  const local = { positions: [], colors: [] }, system = { positions: [], colors: [] }, global = { positions: [], colors: [] }
-  const systemData = [], globalEdges = []
-  const addNode = (p, color, size) => { nodes.positions.push(p.x, p.y, p.z); nodes.colors.push(color.r, color.g, color.b); nodes.sizes.push(size) }
-
-  // Structured JONA CORE: layered inner nodes with visible internal relationships.
-  const coreNodes = []
-  for (let i = 0; i < 170; i++) {
-    const r = Math.pow(Math.random(), .48) * 1.08, theta = rand(0, Math.PI * 2), phi = Math.acos(rand(-1, 1))
-    const p = new THREE.Vector3(Math.sin(phi) * Math.cos(theta) * r, Math.cos(phi) * r, Math.sin(phi) * Math.sin(theta) * r)
-    coreNodes.push(p); const c = CORE_COLOR.clone().lerp(new THREE.Color('#bd4dff'), Math.random() * .55); addNode(p, c, rand(1.2, 3.5))
-  }
-  for (let i = 0; i < 290; i++) { const a = coreNodes[Math.floor(Math.random() * coreNodes.length)], b = coreNodes[Math.floor(Math.random() * coreNodes.length)]; if (a.distanceTo(b) < 1.15) addVertex(local, a, b, CORE_COLOR) }
-
-  SYSTEMS.forEach((zone, zoneIndex) => {
-    const center = new THREE.Vector3(...zone.pos), color = new THREE.Color(zone.color), subCores = [], localNodes = []
-    addNode(center, color.clone().lerp(new THREE.Color('white'), .35), 7)
-
-    // Each main system owns 5–8 sub-cores, each with 8–18 satellite nodes.
-    const subCount = 7 + (zoneIndex % 3)
-    for (let s = 0; s < subCount; s++) {
-      const angle = (s / subCount) * Math.PI * 2 + zoneIndex * .41
-      const sub = center.clone().add(new THREE.Vector3(Math.cos(angle) * rand(.75, 1.45), Math.sin(angle) * rand(.58, 1.18), rand(-1.05, 1.05)))
-      subCores.push(sub); addNode(sub, color.clone().lerp(new THREE.Color('white'), .18), rand(3.1, 4.8)); addVertex(system, center, sub, color.clone().multiplyScalar(.8), color)
-      const satellites = 14 + ((s * 3 + zoneIndex) % 11), cluster = []
-      for (let n = 0; n < satellites; n++) {
-        const theta = rand(0, Math.PI * 2), phi = Math.acos(rand(-1, 1)), radius = rand(.12, .55)
-        const p = sub.clone().add(new THREE.Vector3(Math.sin(phi) * Math.cos(theta) * radius, Math.cos(phi) * radius, Math.sin(phi) * Math.sin(theta) * radius * 1.6))
-        cluster.push(p); localNodes.push(p); addNode(p, color.clone().lerp(new THREE.Color('#ffffff'), Math.random() * .2), rand(.7, 2.05)); addVertex(local, sub, p, color)
-      }
-      for (let n = 0; n < cluster.length * 2.25; n++) { const a = cluster[Math.floor(Math.random() * cluster.length)], b = cluster[Math.floor(Math.random() * cluster.length)]; if (a !== b) addVertex(local, a, b, color.clone().multiplyScalar(.76)) }
-    }
-    // Cross-link the sub-cores so each zone reads as a self-contained brain.
-    subCores.forEach((sub, i) => { addVertex(system, sub, subCores[(i + 1) % subCores.length], color); addVertex(system, sub, subCores[(i + 2) % subCores.length], color.clone().multiplyScalar(.75)); if (i % 2 === 0) addVertex(system, sub, subCores[(i + 3) % subCores.length], color.clone().multiplyScalar(.58)) })
-    systemData.push({ center, color, subCores, localNodes })
-  })
-
-  // Every main core receives a strong command pathway from JONA CORE.
-  systemData.forEach(({ center, color }, i) => {
-    const mid = center.clone().multiplyScalar(.48).add(new THREE.Vector3(rand(-.35, .35), rand(-.35, .35), rand(-.6, .6)))
-    addVertex(global, new THREE.Vector3(), mid, CORE_COLOR, color); addVertex(global, mid, center, color.clone().lerp(CORE_COLOR, .3), color)
-    globalEdges.push({ a: new THREE.Vector3(), b: center, from: -1, to: i, color })
-  })
-  GLOBAL_LINKS.forEach(([a, b]) => {
-    const A = systemData[a], B = systemData[b], mixed = A.color.clone().lerp(B.color, .5)
-    addVertex(global, A.center, B.center, A.color, B.color); globalEdges.push({ a: A.center, b: B.center, from: a, to: b, color: mixed })
-  })
-
-  const attribute = (array, size) => new THREE.Float32BufferAttribute(array, size)
-  return {
-    nodePositions: attribute(nodes.positions, 3), nodeColors: attribute(nodes.colors, 3),
-    localPos: attribute(local.positions, 3), localCol: attribute(local.colors, 3),
-    systemPos: attribute(system.positions, 3), systemCol: attribute(system.colors, 3),
-    globalPos: attribute(global.positions, 3), globalCol: attribute(global.colors, 3),
-    systemData, globalEdges,
-  }
-}
-
-function EnergyRings({ color, radius = .38, speed = 1, intensity = 1 }) {
-  const rings = useRef()
+function JonaEarth({ power }) {
+  const planet = useRef(), clouds = useRef(), texture = useMemo(earthTexture, [])
   useFrame(({ clock }, delta) => {
-    rings.current.rotation.x += delta * .13 * speed; rings.current.rotation.y -= delta * .2 * speed
-    const pulse = 1 + Math.sin(clock.elapsedTime * speed * 2.1) * .07; rings.current.scale.setScalar(pulse)
+    planet.current.rotation.y += delta * .075; clouds.current.rotation.y += delta * .105
+    const pulse = 1 + Math.sin(clock.elapsedTime * 1.5) * .012 + power * .018; planet.current.scale.setScalar(pulse)
   })
-  return <group ref={rings}>
-    {[0, 1, 2].map(i => <mesh key={i} rotation={[i * .78, i * 1.04, i * .47]} scale={1 + i * .28}>
-      <torusGeometry args={[radius, .008 + i * .003, 5, 64]} /><meshBasicMaterial color={color} transparent opacity={(0.72 - i * .16) * intensity} blending={THREE.AdditiveBlending} depthWrite={false} />
-    </mesh>)}
-  </group>
-}
-
-function JonaCore({ intensity }) {
-  const shell = useRef()
-  useFrame(({ clock }, delta) => { shell.current.rotation.y += delta * .09; shell.current.rotation.z -= delta * .035; const p = 1 + Math.sin(clock.elapsedTime * 1.65) * .035 + intensity * .025; shell.current.scale.setScalar(p) })
   return <group>
-    <group ref={shell}><EnergyRings color="#65eaff" radius={1.12} speed={.55} intensity={.85} /><mesh><icosahedronGeometry args={[.88, 2]} /><meshBasicMaterial color="#8befff" wireframe transparent opacity={.33} /></mesh><mesh><icosahedronGeometry args={[.32, 1]} /><meshBasicMaterial color="#e7fbff" transparent opacity={.54} /></mesh></group>
-    <pointLight color="#3fc9ff" intensity={1.35 + intensity * 1.55} distance={4.8} />
-    <Html center distanceFactor={8} className="core-label"><strong>JONA AI</strong><span>CORE</span></Html>
-  </group>
-}
-
-function SystemCore({ zone, index, active, hovered, focused, subCores, onHover, onFocus, audioLevel }) {
-  const ref = useRef(), pulseSpeed = .72 + index * .11, names = SUB_CORE_NAMES[zone.name]
-  useFrame(({ clock }) => { const boost = active ? .18 : 0, p = 1 + Math.sin(clock.elapsedTime * pulseSpeed * 2) * (.055 + boost) + audioLevel * .24; ref.current.scale.setScalar(p); ref.current.rotation.y += .003 + index * .0002 })
-  return <group position={zone.pos}>
-    <group ref={ref}>
-      <mesh onClick={e => { e.stopPropagation(); onFocus(zone.name) }} onPointerOver={e => { e.stopPropagation(); onHover(index); document.body.style.cursor = 'pointer' }} onPointerOut={() => { onHover(null); document.body.style.cursor = 'default' }}><icosahedronGeometry args={[.28, 1]} /><meshBasicMaterial color={zone.color} wireframe /></mesh>
-      <mesh><icosahedronGeometry args={[.105, 1]} /><meshBasicMaterial color={zone.color} /></mesh>
-      <EnergyRings color={zone.color} radius={.36} speed={pulseSpeed} intensity={active || hovered ? 1.5 : .9} />
-      <pointLight color={zone.color} intensity={active || hovered ? 6 : 2.2} distance={3.4} />
+    <group ref={planet}>
+      <mesh castShadow receiveShadow><sphereGeometry args={[1.65, 96, 96]} /><meshStandardMaterial map={texture} color="#76ff88" roughness={.58} metalness={.08} emissive="#0cff3d" emissiveIntensity={.18 + power * .2} /></mesh>
+      <mesh ref={clouds} scale={1.006}><sphereGeometry args={[1.65, 48, 48]} /><meshBasicMaterial color="#b8ffc3" wireframe transparent opacity={.085} /></mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[1.78, .013, 5, 128]} /><meshBasicMaterial color="#3cff6a" transparent opacity={.5} /></mesh>
+      <Atmosphere scale={1.82} />
     </group>
-    {subCores.map((world, i) => <SubCore key={i} position={world.clone().sub(new THREE.Vector3(...zone.pos))} color={zone.color} name={names[i % names.length]} visible={focused || hovered} />)}
-    <Html position={[index % 2 ? -1.08 : .72, index % 3 === 0 ? .72 : -.72, 0]} distanceFactor={11} className={`system-label ${active ? 'active' : ''}`}>
-      <div><strong>{LABELS[index]}</strong><span>STATUS: {index === 7 ? 'READY' : 'ACTIVE'} · SIGNAL: {74 + index * 3}%</span></div><i />
-    </Html>
+    <pointLight color="#37ff67" intensity={3.2 + power * 2.2} distance={8} />
+    <Html center distanceFactor={9} className="planet-core-label"><strong>JONA AI</strong><span>WORLD CORE</span></Html>
   </group>
 }
 
-function SubCore({ position, color, name, visible }) {
-  const [hover, setHover] = useState(false), ref = useRef()
-  useFrame(({ clock }) => { const p = hover ? 1.7 + Math.sin(clock.elapsedTime * 6) * .18 : visible ? 1.15 : .72; ref.current.scale.lerp(new THREE.Vector3(p, p, p), .12) })
-  return <group position={position} ref={ref}>
-    <mesh onPointerOver={e => { e.stopPropagation(); setHover(true) }} onPointerOut={() => setHover(false)}><sphereGeometry args={[.055, 8, 8]} /><meshBasicMaterial color={color} /></mesh>
-    {(hover || visible) && <Html center distanceFactor={13} className={`subcore-label ${hover ? 'hover' : ''}`}>{name}</Html>}
-  </group>
+function OrbitRing({ radius, tilt }) {
+  const points = useMemo(() => Array.from({ length: 129 }, (_, i) => { const a = i / 128 * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius * .34, Math.sin(a) * Math.sin(tilt) * radius * .68) }), [radius, tilt])
+  return <Line points={points} color="#245c39" transparent opacity={.28} lineWidth={.45} />
 }
 
-function Signals({ data, power }) {
-  const ref = useRef()
-  const signalData = useMemo(() => {
-    const count = CONFIG.signalCount, positions = new Float32Array(count * 3), colors = new Float32Array(count * 3)
-    return { count, positions, colors, phases: Array.from({ length: count }, (_, i) => (i / count) % 1), links: Array.from({ length: count }, (_, i) => i % data.globalEdges.length) }
-  }, [data])
-  useFrame((_, delta) => {
-    for (let i = 0; i < signalData.count; i++) {
-      signalData.phases[i] = (signalData.phases[i] + delta * (.15 + power * .23 + (i % 5) * .009)) % 1
-      const edge = data.globalEdges[signalData.links[i]], t = signalData.phases[i], p = edge.a.clone().lerp(edge.b, t)
-      signalData.positions.set(p.toArray(), i * 3); signalData.colors.set(edge.color.toArray(), i * 3)
-      if (t < .008) signalData.links[i] = (signalData.links[i] + 1 + (i % 3)) % data.globalEdges.length
-    }
-    ref.current.geometry.attributes.position.needsUpdate = true; ref.current.geometry.attributes.color.needsUpdate = true
+function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFocus, registerPosition }) {
+  const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), [])
+  useFrame(({ clock }, delta) => {
+    const angle = config.phase + clock.elapsedTime * config.speed
+    pivot.current.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius * .34, Math.sin(angle) * Math.sin(config.tilt) * config.radius * .68)
+    body.current.rotation.y += delta * (.22 + index * .035); body.current.rotation.x += delta * .025
+    const pulse = 1 + (active ? .08 : .015) * Math.sin(clock.elapsedTime * (2 + index * .2)) + voiceLevel * .18 + (hovered ? .12 : 0)
+    body.current.scale.setScalar(pulse); pivot.current.getWorldPosition(world); registerPosition(config.name, world)
   })
-  return <points ref={ref}><bufferGeometry><bufferAttribute attach="attributes-position" args={[signalData.positions, 3]} /><bufferAttribute attach="attributes-color" args={[signalData.colors, 3]} /></bufferGeometry><pointsMaterial vertexColors size={.072 + power * .018} transparent opacity={1} blending={THREE.AdditiveBlending} depthWrite={false} /></points>
+  return <group ref={pivot}>
+    <group ref={body}>
+      <mesh onClick={e => { e.stopPropagation(); onFocus(config.name) }} onPointerOver={e => { e.stopPropagation(); setHovered(true); onHover(config.name); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); onHover(null); document.body.style.cursor = 'default' }}>
+        <sphereGeometry args={[config.size, 48, 48]} /><meshStandardMaterial color={config.color} roughness={.46} metalness={.22} emissive={config.color} emissiveIntensity={active || hovered ? .55 : .16} />
+      </mesh>
+      <mesh scale={1.008}><sphereGeometry args={[config.size, 20, 20]} /><meshBasicMaterial color="#ffffff" wireframe transparent opacity={.1} /></mesh>
+      <Atmosphere color={config.color} scale={config.size * 1.22} />
+      {index === 3 && <mesh rotation={[1.15, .2, 0]}><torusGeometry args={[config.size * 1.45, .025, 6, 80]} /><meshBasicMaterial color={config.color} transparent opacity={.72} /></mesh>}
+    </group>
+    <pointLight color={config.color} intensity={active || hovered ? 3.8 : .75} distance={2.4} />
+    <Html position={[config.size + .24, config.size * .3, 0]} distanceFactor={12} className={`planet-label ${active ? 'active' : ''}`}><strong>{config.label}</strong><span>{focused ? 'FOCUS' : active ? 'ACTIVE' : 'ORBITAL SYSTEM'}</span></Html>
+  </group>
 }
 
-function PrimarySignal({ signal, data }) {
-  const ref = useRef(), halo = useRef(), progress = useRef(0)
-  const resolve = name => name === 'CORE' ? new THREE.Vector3() : name === 'INPUT' ? new THREE.Vector3(0, -6.4, 1.4) : data.systemData[SYSTEMS.findIndex(s => s.name === name)]?.center
+function TravelSignal({ signal, positions }) {
+  const ref = useRef(), progress = useRef(0)
   useEffect(() => { progress.current = 0 }, [signal.step, signal.run])
   useFrame((_, delta) => {
     if (!ref.current || signal.step < 0 || signal.step >= signal.path.length - 1) { if (ref.current) ref.current.visible = false; return }
-    const a = resolve(signal.path[signal.step]), b = resolve(signal.path[signal.step + 1]); if (!a || !b) return
-    progress.current = Math.min(1, progress.current + delta / .66); ref.current.visible = true; ref.current.position.copy(a).lerp(b, progress.current); halo.current.scale.setScalar(1 + Math.sin(progress.current * Math.PI) * 2.5)
+    const resolve = name => name === 'CORE' || name === 'INPUT' || !positions.current[name] ? new THREE.Vector3() : positions.current[name]
+    const from = resolve(signal.path[signal.step]), to = resolve(signal.path[signal.step + 1]); progress.current = Math.min(1, progress.current + delta / .66)
+    ref.current.visible = true; ref.current.position.copy(from).lerp(to, progress.current)
   })
-  return <group ref={ref} visible={false}><mesh><sphereGeometry args={[.075, 10, 10]} /><meshBasicMaterial color="#eaffff" /></mesh><mesh ref={halo}><sphereGeometry args={[.13, 10, 10]} /><meshBasicMaterial color="#65efff" transparent opacity={.16} blending={THREE.AdditiveBlending} /></mesh><pointLight color="#65efff" intensity={4} distance={1.8} /></group>
-}
-
-function Lines({ position, color, opacity, linewidth = 1, energy = false }) {
-  return <lineSegments><bufferGeometry><primitive attach="attributes-position" object={position} /><primitive attach="attributes-color" object={color} /></bufferGeometry><lineBasicMaterial vertexColors transparent opacity={opacity} linewidth={linewidth} blending={energy ? THREE.AdditiveBlending : THREE.NormalBlending} depthWrite={false} /></lineSegments>
-}
-
-function FocusConnections({ system }) {
-  const geometry = useMemo(() => {
-    const values = []
-    system.subCores.forEach(p => values.push(...system.center.toArray(), ...p.toArray()))
-    values.push(...new THREE.Vector3().toArray(), ...system.center.toArray())
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(values, 3)); return g
-  }, [system])
-  return <lineSegments geometry={geometry}><lineBasicMaterial color={system.color} transparent opacity={1} blending={THREE.AdditiveBlending} depthWrite={false} /></lineSegments>
+  return <group ref={ref} visible={false}><mesh><sphereGeometry args={[.075, 12, 12]} /><meshBasicMaterial color="#ffffff" /></mesh><pointLight color="#5eff82" intensity={5} distance={2} /></group>
 }
 
 export default function NeuralNetwork({ ready, boot }) {
-  const group = useRef(), points = useRef(), [hovered, setHovered] = useState(null)
-  const data = useMemo(generateArchitecture, []), { pointer, camera, controls } = useThree(), { state, sequence, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem } = useNeuralState()
-  const voice = useVoice()
+  const system = useRef(), positions = useRef({}), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
+  const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem } = useNeuralState(), voice = useVoice()
   const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
-  const bootPower = boot?.phase === 'impact' ? 1.25 : boot?.phase === 'zones' ? .65 : 0
-  const statePower = Math.max(bootPower, voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .7 : state === 'LISTENING' ? .45 : 0)
-  const active = boot?.phase === 'zones' ? SYSTEMS.slice(0, boot.zone + 1).map(z => z.name) : sequence
-  const focusIndex = SYSTEMS.findIndex(s => s.name === focusedSystem), focusPos = focusIndex >= 0 ? new THREE.Vector3(...SYSTEMS[focusIndex].pos) : new THREE.Vector3()
+  const power = Math.max(voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .72 : state === 'LISTENING' ? .5 : 0)
+  const focusPosition = positions.current[focusedSystem]
 
-  useFrame(({ clock }, delta) => {
-    group.current.rotation.y += delta * .009
-    group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, pointer.y * .075, .022)
-    group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, -pointer.x * .045, .022)
-    const explorationDim = hovered !== null || focusIndex >= 0 ? .46 : 1
-    points.current.material.opacity = THREE.MathUtils.lerp(points.current.material.opacity, ready ? .96 * explorationDim : booting ? .78 : .01, .035)
-    points.current.material.size = .045 + Math.sin(clock.elapsedTime * 1.7) * .004 + statePower * .008
+  useFrame((_, delta) => {
+    system.current.rotation.x = THREE.MathUtils.lerp(system.current.rotation.x, pointer.y * .035, .02)
+    system.current.rotation.z = THREE.MathUtils.lerp(system.current.rotation.z, -pointer.x * .025, .02)
     if (ready && controls) {
-      const desiredTarget = focusIndex >= 0 ? focusPos : new THREE.Vector3()
-      const desiredCamera = focusIndex >= 0 ? focusPos.clone().add(new THREE.Vector3(0, .25, 4.25)) : new THREE.Vector3(0, 0, 15.3)
-      controls.target.lerp(desiredTarget, focusIndex >= 0 ? .035 : .025); camera.position.lerp(desiredCamera, focusIndex >= 0 ? .025 : .018); controls.update()
+      const target = focusedSystem && focusPosition ? focusPosition : new THREE.Vector3()
+      const cameraTarget = focusedSystem && focusPosition ? focusPosition.clone().add(new THREE.Vector3(0, .2, 3.4)) : new THREE.Vector3(0, 0, 15.3)
+      controls.target.lerp(target, .025); camera.position.lerp(cameraTarget, .018); controls.update()
     }
   })
 
-  return <group ref={group} scale={ready || booting ? 1 : .04}>
-    <Lines position={data.localPos} color={data.localCol} opacity={(hovered !== null || focusIndex >= 0 ? .26 : .66) + statePower * .05} />
-    <Lines position={data.systemPos} color={data.systemCol} opacity={(hovered !== null || focusIndex >= 0 ? .42 : .88) + statePower * .05} />
-    <Lines position={data.globalPos} color={data.globalCol} opacity={(hovered !== null || focusIndex >= 0 ? .48 : .82) + statePower * .06} linewidth={1} energy />
-    {(focusIndex >= 0 || hovered !== null) && <FocusConnections system={data.systemData[focusIndex >= 0 ? focusIndex : hovered]} />}
-    <points ref={points}><bufferGeometry><primitive attach="attributes-position" object={data.nodePositions} /><primitive attach="attributes-color" object={data.nodeColors} /></bufferGeometry><pointsMaterial vertexColors size={.038} sizeAttenuation transparent opacity={.94} blending={THREE.NormalBlending} depthWrite={true} alphaTest={.08} /></points>
-    <Signals data={data} power={statePower} /><PrimarySignal signal={signal} data={data} /><JonaCore intensity={statePower} />
-    {SYSTEMS.map((zone, i) => <SystemCore key={zone.name} zone={zone} index={i} active={active.includes(zone.name) || systemActivity[zone.name] > .55} audioLevel={(voice.status === 'LISTENING' && i === 0) || (voice.status === 'SPEAKING' && i === 7) ? voice.amplitude : 0} hovered={hovered === i} focused={focusedSystem === zone.name} subCores={data.systemData[i].subCores} onHover={value => { setHovered(value); setHoveredSystem(value === null ? null : SYSTEMS[value].name) }} onFocus={focusSystem} />)}
+  return <group ref={system} scale={ready || booting ? 1 : .05}>
+    <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
+    <JonaEarth power={power} />
+    {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} tilt={config.tilt} />)}
+    {PLANETS.map((config, index) => <OrbitPlanet key={config.name} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={focusSystem} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
+    <TravelSignal signal={signal} positions={positions} />
+    {hovered && positions.current[hovered] && <Line points={[new THREE.Vector3(), positions.current[hovered]]} color={PLANETS.find(p => p.name === hovered)?.color || '#55ff77'} transparent opacity={.45} lineWidth={1} />}
   </group>
 }
