@@ -16,15 +16,19 @@ const PLANETS = [
   { name: 'CONTEXT', label: 'CONTEXT', color: '#e83c9f', dark: '#4b0c35', radius: 10.15, size: .43, speed: .0051, phase: 2.78, surface: 'cloud' },
 ]
 
-const ORBITAL_BODIES = PLANETS.flatMap((planet, orbitIndex) => ['A', 'B', 'C', 'D'].map((slot, slotIndex) => ({
-  ...planet,
-  id: `${planet.name}-${slot}`,
-  label: slotIndex ? `${planet.label} ${['', 'II', 'III', 'IV'][slotIndex]}` : planet.label,
-  phase: planet.phase + slotIndex * Math.PI / 2,
-  variant: orbitIndex * 4 + slotIndex,
-  companion: slotIndex > 0,
-  slotIndex,
-})))
+const ROMAN = ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+const ORBITAL_BODIES = PLANETS.flatMap((planet, orbitIndex) => {
+  const bodyCount = orbitIndex >= PLANETS.length - 2 ? 8 : 4
+  return Array.from({ length: bodyCount }, (_, slotIndex) => ({
+    ...planet,
+    id: `${planet.name}-${slotIndex + 1}`,
+    label: slotIndex ? `${planet.label} ${ROMAN[slotIndex]}` : planet.label,
+    phase: planet.phase + slotIndex * Math.PI * 2 / bodyCount,
+    variant: orbitIndex * 8 + slotIndex,
+    companion: slotIndex > 0,
+    slotIndex,
+  }))
+})
 
 function seeded(seed) {
   let value = seed * 9301 + 49297
