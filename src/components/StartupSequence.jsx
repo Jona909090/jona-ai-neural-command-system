@@ -22,7 +22,9 @@ function MatrixCurtain() {
     }
     const draw = time => {
       if (time - last > 42) {
-        context.fillStyle = 'rgba(0, 4, 1, .16)'
+        context.shadowBlur = 0
+        context.shadowColor = 'transparent'
+        context.fillStyle = 'rgba(0, 0, 0, .28)'
         context.fillRect(0, 0, innerWidth, innerHeight)
         context.font = '14px DM Mono, monospace'
         columns.forEach((y, index) => {
