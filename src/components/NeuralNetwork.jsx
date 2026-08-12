@@ -107,7 +107,7 @@ function JonaEarth({ power, onActivate }) {
       <Atmosphere scale={1.82} />
     </group>
     <pointLight color="#37ff67" intensity={3.2 + power * 2.2} distance={8} />
-    <Html center distanceFactor={9} className={`planet-core-label ${hovered ? 'ready' : ''}`}><strong>JONA AI</strong><span>{hovered ? 'CLICK TO SPEAK' : 'WORLD CORE'}</span></Html>
+    <Html center distanceFactor={9} className={`planet-core-label ${hovered ? 'ready' : ''}`}><strong>JONA AI</strong><span>{hovered ? 'ACTIVATE CORE' : 'WORLD CORE'}</span></Html>
   </group>
 }
 
@@ -172,7 +172,7 @@ export default function NeuralNetwork({ ready, boot }) {
 
   return <group ref={system} scale={ready || booting ? 1 : .05}>
     <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
-    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null); voice.startSpeaking('Dobro došli u Jona AI planetarni sistem.') }} />
+    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null) }} />
     {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
     {ORBITAL_BODIES.map((config, index) => <OrbitPlanet key={config.id} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={(name, point) => { selectedPosition.current = point; focusSystem(name) }} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />
