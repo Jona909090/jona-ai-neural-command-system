@@ -6,13 +6,51 @@ import { useNeuralState } from '../state/NeuralStateContext'
 import { useVoice } from '../controllers/VoiceContext'
 
 const PLANETS = [
-  { name: 'LANGUAGE', label: 'LANGUAGE', color: '#9ca3ad', radius: 3.35, size: .43, speed: .082, tilt: .18, phase: .3 },
-  { name: 'MEMORY', label: 'MEMORY', color: '#ff3038', radius: 4.15, size: .55, speed: .062, tilt: -.27, phase: 2.25 },
-  { name: 'LOGIC', label: 'LOGIC', color: '#208dff', radius: 5.05, size: .48, speed: .049, tilt: .34, phase: 4.35 },
-  { name: 'CREATIVE', label: 'CREATIVE', color: '#ffe42f', radius: 5.85, size: .62, speed: .039, tilt: -.16, phase: 1.35 },
-  { name: 'PLANNING', label: 'PLANNING', color: '#a94cff', radius: 6.65, size: .5, speed: .032, tilt: .26, phase: 3.22 },
-  { name: 'RESPONSE', label: 'RESPONSE', color: '#19e8c5', radius: 7.35, size: .58, speed: .027, tilt: -.32, phase: 5.25 },
+  { name: 'LANGUAGE', label: 'LANGUAGE', color: '#9ca3ad', dark: '#313740', radius: 3.35, size: .43, speed: .082, tilt: .18, phase: .3, surface: 'crater' },
+  { name: 'MEMORY', label: 'MEMORY', color: '#d94132', dark: '#44150f', radius: 4.15, size: .55, speed: .062, tilt: -.27, phase: 2.25, surface: 'rock' },
+  { name: 'LOGIC', label: 'LOGIC', color: '#257dd4', dark: '#061d4c', radius: 5.05, size: .48, speed: .049, tilt: .34, phase: 4.35, surface: 'ocean' },
+  { name: 'CREATIVE', label: 'CREATIVE', color: '#d7a72b', dark: '#6b3511', radius: 5.85, size: .62, speed: .039, tilt: -.16, phase: 1.35, surface: 'gas' },
+  { name: 'PLANNING', label: 'PLANNING', color: '#8246bd', dark: '#28133f', radius: 6.65, size: .5, speed: .032, tilt: .26, phase: 3.22, surface: 'storm' },
+  { name: 'RESPONSE', label: 'RESPONSE', color: '#3fbfae', dark: '#0b4350', radius: 7.35, size: .58, speed: .027, tilt: -.32, phase: 5.25, surface: 'ice' },
 ]
+
+function seeded(seed) {
+  let value = seed * 9301 + 49297
+  return () => { value = (value * 9301 + 49297) % 233280; return value / 233280 }
+}
+
+function planetTexture(config, index) {
+  const canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 384
+  const ctx = canvas.getContext('2d'), random = seeded(index + 11)
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height); gradient.addColorStop(0, config.dark); gradient.addColorStop(.48, config.color); gradient.addColorStop(1, config.dark)
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  if (config.surface === 'gas' || config.surface === 'storm') {
+    for (let y = 0; y < canvas.height; y += 9 + Math.floor(random() * 11)) {
+      ctx.globalAlpha = .12 + random() * .25; ctx.fillStyle = random() > .5 ? '#fff4bd' : config.dark
+      ctx.beginPath(); ctx.moveTo(0, y)
+      for (let x = 0; x <= canvas.width; x += 24) ctx.lineTo(x, y + Math.sin(x * .018 + random() * 5) * (3 + random() * 7))
+      ctx.lineTo(canvas.width, y + 10); ctx.lineTo(0, y + 10); ctx.fill()
+    }
+  } else {
+    for (let i = 0; i < 220; i++) {
+      const x = random() * canvas.width, y = random() * canvas.height, radius = 2 + random() * (config.surface === 'crater' ? 20 : 38)
+      ctx.globalAlpha = .08 + random() * .24; ctx.fillStyle = random() > .48 ? '#ffffff' : config.dark
+      ctx.beginPath(); ctx.ellipse(x, y, radius * (1 + random() * 1.8), radius * (.35 + random() * .7), random() * Math.PI, 0, Math.PI * 2); ctx.fill()
+      if (config.surface === 'crater' && radius > 10) { ctx.globalAlpha = .28; ctx.strokeStyle = '#d4d7da'; ctx.lineWidth = 2; ctx.stroke() }
+    }
+  }
+  if (config.surface === 'ocean') {
+    ctx.globalAlpha = .32; ctx.strokeStyle = '#d9f4ff'; ctx.lineWidth = 4
+    for (let i = 0; i < 18; i++) { const y = random() * canvas.height; ctx.beginPath(); ctx.moveTo(0, y); for (let x = 0; x < canvas.width; x += 30) ctx.lineTo(x, y + Math.sin(x * .025 + i) * 10); ctx.stroke() }
+  }
+  if (config.surface === 'ice') {
+    ctx.globalAlpha = .38; ctx.strokeStyle = '#c8ffff'; ctx.lineWidth = 2
+    for (let i = 0; i < 45; i++) { const x = random() * canvas.width, y = random() * canvas.height; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + random() * 90 - 45, y + random() * 60 - 30); ctx.stroke() }
+  }
+  ctx.globalAlpha = 1
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8; return texture
+}
 
 function earthTexture() {
   const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512
@@ -59,7 +97,7 @@ function OrbitRing({ radius, tilt }) {
 }
 
 function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFocus, registerPosition }) {
-  const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), [])
+  const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), []), texture = useMemo(() => planetTexture(config, index), [config, index])
   useFrame(({ clock }, delta) => {
     const angle = config.phase + clock.elapsedTime * config.speed
     pivot.current.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius * .34, Math.sin(angle) * Math.sin(config.tilt) * config.radius * .68)
@@ -70,7 +108,7 @@ function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFo
   return <group ref={pivot}>
     <group ref={body}>
       <mesh onClick={e => { e.stopPropagation(); onFocus(config.name) }} onPointerOver={e => { e.stopPropagation(); setHovered(true); onHover(config.name); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); onHover(null); document.body.style.cursor = 'default' }}>
-        <sphereGeometry args={[config.size, 48, 48]} /><meshStandardMaterial color={config.color} roughness={.46} metalness={.22} emissive={config.color} emissiveIntensity={active || hovered ? .55 : .16} />
+        <sphereGeometry args={[config.size, 64, 64]} /><meshStandardMaterial map={texture} color="#ffffff" roughness={config.surface === 'ice' ? .32 : .78} metalness={config.surface === 'ice' ? .14 : .025} emissive={config.color} emissiveIntensity={active || hovered ? .25 : .035} bumpMap={texture} bumpScale={config.size * .035} />
       </mesh>
       <mesh scale={1.008}><sphereGeometry args={[config.size, 20, 20]} /><meshBasicMaterial color="#ffffff" wireframe transparent opacity={.1} /></mesh>
       <Atmosphere color={config.color} scale={config.size * 1.22} />
