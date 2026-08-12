@@ -38,7 +38,7 @@ function PlanetaryPyramid({ runtime }) {
     const parents = rows[rowIndex], childY = y(rowIndex + 1), parentY = y(rowIndex)
     return Array.from({ length: row.count }, (_, child) => {
       const parent = Math.min(parents.count - 1, Math.floor(child * parents.count / row.count))
-      const path = `M ${x(parent, parents.count)} ${parentY + 2} V ${(parentY + childY) / 2} H ${x(child, row.count)} V ${childY - 2}`
+      const path = `M ${x(parent, parents.count)} ${parentY} V ${(parentY + childY) / 2} H ${x(child, row.count)} V ${childY}`
       return <g key={`branch-${rowIndex}-${child}`}><path className="tree-wire" d={path} /><path className="tree-current" d={path} style={{ '--delay': `${-(rowIndex * .19 + child * .08)}s` }} /></g>
     })
   })
