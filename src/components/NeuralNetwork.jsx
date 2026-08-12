@@ -16,6 +16,11 @@ const PLANETS = [
   { name: 'CONTEXT', label: 'CONTEXT', color: '#e83c9f', dark: '#4b0c35', radius: 10.15, size: .43, speed: .0051, phase: 2.78, surface: 'cloud' },
 ]
 
+const ORBITAL_BODIES = PLANETS.flatMap((planet, index) => [
+  { ...planet, id: `${planet.name}-A`, variant: index * 2, companion: false },
+  { ...planet, id: `${planet.name}-B`, label: `${planet.label} II`, phase: planet.phase + Math.PI, variant: index * 2 + 1, companion: true },
+])
+
 function seeded(seed) {
   let value = seed * 9301 + 49297
   return () => { value = (value * 9301 + 49297) % 233280; return value / 233280 }
@@ -103,17 +108,17 @@ function OrbitRing({ radius }) {
 }
 
 function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFocus, registerPosition }) {
-  const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), []), texture = useMemo(() => planetTexture(config, index), [config, index])
+  const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), []), texture = useMemo(() => planetTexture(config, config.variant), [config])
   useFrame(({ clock }, delta) => {
     const angle = config.phase + clock.elapsedTime * config.speed
     pivot.current.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius, 0)
-    body.current.rotation.y += delta * (.055 + index * .008); body.current.rotation.x += delta * .006
+    body.current.rotation.y += delta * (.045 + (index % 8) * .006) * (config.companion ? -.82 : 1); body.current.rotation.x += delta * .005
     const pulse = 1 + (active ? .08 : .015) * Math.sin(clock.elapsedTime * (2 + index * .2)) + voiceLevel * .18 + (hovered ? .12 : 0)
-    body.current.scale.setScalar(pulse); pivot.current.getWorldPosition(world); registerPosition(config.name, world)
+    body.current.scale.setScalar(pulse); pivot.current.getWorldPosition(world); if (!config.companion) registerPosition(config.name, world)
   })
   return <group ref={pivot}>
     <group ref={body}>
-      <mesh onClick={e => { e.stopPropagation(); onFocus(config.name) }} onPointerOver={e => { e.stopPropagation(); setHovered(true); onHover(config.name); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); onHover(null); document.body.style.cursor = 'default' }}>
+      <mesh onClick={e => { e.stopPropagation(); onFocus(config.name, world.clone()) }} onPointerOver={e => { e.stopPropagation(); setHovered(true); onHover(config.name); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); onHover(null); document.body.style.cursor = 'default' }}>
         <sphereGeometry args={[config.size, 64, 64]} /><meshStandardMaterial map={texture} color="#ffffff" roughness={config.surface === 'ice' ? .32 : .78} metalness={config.surface === 'ice' ? .14 : .025} emissive={config.color} emissiveIntensity={active || hovered ? .25 : .035} bumpMap={texture} bumpScale={config.size * .035} />
       </mesh>
       <mesh scale={1.008}><sphereGeometry args={[config.size, 20, 20]} /><meshBasicMaterial color="#ffffff" wireframe transparent opacity={.1} /></mesh>
@@ -138,11 +143,11 @@ function TravelSignal({ signal, positions }) {
 }
 
 export default function NeuralNetwork({ ready, boot }) {
-  const system = useRef(), positions = useRef({}), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
+  const system = useRef(), positions = useRef({}), selectedPosition = useRef(null), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
   const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem } = useNeuralState(), voice = useVoice()
   const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
   const power = Math.max(voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .72 : state === 'LISTENING' ? .5 : 0)
-  const focusPosition = positions.current[focusedSystem]
+  const focusPosition = selectedPosition.current || positions.current[focusedSystem]
 
   useFrame((_, delta) => {
     system.current.rotation.x = THREE.MathUtils.lerp(system.current.rotation.x, pointer.y * .035, .02)
@@ -158,7 +163,7 @@ export default function NeuralNetwork({ ready, boot }) {
     <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
     <JonaEarth power={power} />
     {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
-    {PLANETS.map((config, index) => <OrbitPlanet key={config.name} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={focusSystem} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
+    {ORBITAL_BODIES.map((config, index) => <OrbitPlanet key={config.id} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={(name, point) => { selectedPosition.current = point; focusSystem(name) }} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />
     {hovered && positions.current[hovered] && <Line points={[new THREE.Vector3(), positions.current[hovered]]} color={PLANETS.find(p => p.name === hovered)?.color || '#55ff77'} transparent opacity={.45} lineWidth={1} />}
   </group>
