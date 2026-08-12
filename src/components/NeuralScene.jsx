@@ -9,7 +9,7 @@ import { CONFIG } from '../config/neuralConfig'
 export default function NeuralScene({ ready, boot }) {
   const revealed = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot.phase)
   return <div className={`scene ${ready ? 'online' : ''} ${revealed ? 'boot-reveal' : ''} boot-${boot.phase}`}>
-    <Canvas dpr={[1.25, 2]} camera={{ position: [0, 0, 15.3], fov: 48 }} gl={{ antialias: true, powerPreference: 'high-performance', alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: .88, outputColorSpace: THREE.SRGBColorSpace }} onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .88 }}>
+    <Canvas dpr={[1.25, 2]} camera={{ position: [0, 0, 17], fov: 48 }} gl={{ antialias: true, powerPreference: 'high-performance', alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: .88, outputColorSpace: THREE.SRGBColorSpace }} onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .88 }}>
       <color attach="background" args={['#000106']} />
       <fog attach="fog" args={['#000106', 22, 40]} />
       <Suspense fallback={null}><NeuralNetwork ready={ready} boot={boot} /></Suspense>

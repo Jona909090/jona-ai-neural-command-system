@@ -6,12 +6,12 @@ import { useNeuralState } from '../state/NeuralStateContext'
 import { useVoice } from '../controllers/VoiceContext'
 
 const PLANETS = [
-  { name: 'LANGUAGE', label: 'LANGUAGE', color: '#9ca3ad', dark: '#313740', radius: 3.35, size: .43, speed: .082, tilt: .18, phase: .3, surface: 'crater' },
-  { name: 'MEMORY', label: 'MEMORY', color: '#d94132', dark: '#44150f', radius: 4.15, size: .55, speed: .062, tilt: -.27, phase: 2.25, surface: 'rock' },
-  { name: 'LOGIC', label: 'LOGIC', color: '#257dd4', dark: '#061d4c', radius: 5.05, size: .48, speed: .049, tilt: .34, phase: 4.35, surface: 'ocean' },
-  { name: 'CREATIVE', label: 'CREATIVE', color: '#d7a72b', dark: '#6b3511', radius: 5.85, size: .62, speed: .039, tilt: -.16, phase: 1.35, surface: 'gas' },
-  { name: 'PLANNING', label: 'PLANNING', color: '#8246bd', dark: '#28133f', radius: 6.65, size: .5, speed: .032, tilt: .26, phase: 3.22, surface: 'storm' },
-  { name: 'RESPONSE', label: 'RESPONSE', color: '#3fbfae', dark: '#0b4350', radius: 7.35, size: .58, speed: .027, tilt: -.32, phase: 5.25, surface: 'ice' },
+  { name: 'LANGUAGE', label: 'LANGUAGE', color: '#9ca3ad', dark: '#313740', radius: 3.15, size: .36, speed: .021, phase: .15, surface: 'crater' },
+  { name: 'MEMORY', label: 'MEMORY', color: '#d94132', dark: '#44150f', radius: 4.15, size: .44, speed: .017, phase: 1.18, surface: 'rock' },
+  { name: 'LOGIC', label: 'LOGIC', color: '#257dd4', dark: '#061d4c', radius: 5.15, size: .4, speed: .014, phase: 2.2, surface: 'ocean' },
+  { name: 'CREATIVE', label: 'CREATIVE', color: '#d7a72b', dark: '#6b3511', radius: 6.15, size: .46, speed: .0115, phase: 3.25, surface: 'gas' },
+  { name: 'PLANNING', label: 'PLANNING', color: '#8246bd', dark: '#28133f', radius: 7.15, size: .4, speed: .0095, phase: 4.28, surface: 'storm' },
+  { name: 'RESPONSE', label: 'RESPONSE', color: '#3fbfae', dark: '#0b4350', radius: 8.15, size: .44, speed: .0075, phase: 5.3, surface: 'ice' },
 ]
 
 function seeded(seed) {
@@ -91,8 +91,8 @@ function JonaEarth({ power }) {
   </group>
 }
 
-function OrbitRing({ radius, tilt }) {
-  const points = useMemo(() => Array.from({ length: 129 }, (_, i) => { const a = i / 128 * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius * .34, Math.sin(a) * Math.sin(tilt) * radius * .68) }), [radius, tilt])
+function OrbitRing({ radius }) {
+  const points = useMemo(() => Array.from({ length: 129 }, (_, i) => { const a = i / 128 * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0) }), [radius])
   return <Line points={points} color="#245c39" transparent opacity={.28} lineWidth={.45} />
 }
 
@@ -100,8 +100,8 @@ function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFo
   const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), []), texture = useMemo(() => planetTexture(config, index), [config, index])
   useFrame(({ clock }, delta) => {
     const angle = config.phase + clock.elapsedTime * config.speed
-    pivot.current.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius * .34, Math.sin(angle) * Math.sin(config.tilt) * config.radius * .68)
-    body.current.rotation.y += delta * (.22 + index * .035); body.current.rotation.x += delta * .025
+    pivot.current.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius, 0)
+    body.current.rotation.y += delta * (.055 + index * .008); body.current.rotation.x += delta * .006
     const pulse = 1 + (active ? .08 : .015) * Math.sin(clock.elapsedTime * (2 + index * .2)) + voiceLevel * .18 + (hovered ? .12 : 0)
     body.current.scale.setScalar(pulse); pivot.current.getWorldPosition(world); registerPosition(config.name, world)
   })
@@ -143,7 +143,7 @@ export default function NeuralNetwork({ ready, boot }) {
     system.current.rotation.z = THREE.MathUtils.lerp(system.current.rotation.z, -pointer.x * .025, .02)
     if (ready && controls) {
       const target = focusedSystem && focusPosition ? focusPosition : new THREE.Vector3()
-      const cameraTarget = focusedSystem && focusPosition ? focusPosition.clone().add(new THREE.Vector3(0, .2, 3.4)) : new THREE.Vector3(0, 0, 15.3)
+      const cameraTarget = focusedSystem && focusPosition ? focusPosition.clone().add(new THREE.Vector3(0, .2, 3.4)) : new THREE.Vector3(0, 0, 17)
       controls.target.lerp(target, .025); camera.position.lerp(cameraTarget, .018); controls.update()
     }
   })
@@ -151,7 +151,7 @@ export default function NeuralNetwork({ ready, boot }) {
   return <group ref={system} scale={ready || booting ? 1 : .05}>
     <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
     <JonaEarth power={power} />
-    {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} tilt={config.tilt} />)}
+    {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
     {PLANETS.map((config, index) => <OrbitPlanet key={config.name} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={focusSystem} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />
     {hovered && positions.current[hovered] && <Line points={[new THREE.Vector3(), positions.current[hovered]]} color={PLANETS.find(p => p.name === hovered)?.color || '#55ff77'} transparent opacity={.45} lineWidth={1} />}
