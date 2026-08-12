@@ -152,8 +152,8 @@ function TravelSignal({ signal, positions }) {
 }
 
 export default function NeuralNetwork({ ready, boot }) {
-  const system = useRef(), positions = useRef({}), selectedPosition = useRef(null), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
-  const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem } = useNeuralState(), voice = useVoice()
+  const system = useRef(), positions = useRef({}), selectedPosition = useRef(null), proximityState = useRef(null), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
+  const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem, setNearbySystem } = useNeuralState(), voice = useVoice()
   const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
   const power = Math.max(voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .72 : state === 'LISTENING' ? .5 : 0)
   const focusPosition = selectedPosition.current || positions.current[focusedSystem]
@@ -165,6 +165,8 @@ export default function NeuralNetwork({ ready, boot }) {
       const target = focusedSystem && focusPosition ? focusPosition : new THREE.Vector3()
       const cameraTarget = focusedSystem && focusPosition ? focusPosition.clone().add(new THREE.Vector3(0, .2, 3.4)) : new THREE.Vector3(0, 0, 24)
       controls.target.lerp(target, .025); camera.position.lerp(cameraTarget, .018); controls.update()
+      const nearby = focusedSystem && focusPosition && camera.position.distanceTo(focusPosition) < 4.45 ? focusedSystem : null
+      if (nearby !== proximityState.current) { proximityState.current = nearby; setNearbySystem(nearby) }
     }
   })
 
