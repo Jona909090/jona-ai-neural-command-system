@@ -3,6 +3,7 @@ import { ZONES } from '../config/neuralConfig'
 import { AI_MODE } from '../config/aiConfig'
 import { useNeuralState } from '../state/NeuralStateContext'
 import { useVoice } from '../controllers/VoiceContext'
+import { useConversation } from '../controllers/ConversationContext'
 
 const SUBSYSTEMS = {
   LANGUAGE: ['INPUT', 'SEMANTICS', 'INTENT', 'TRANSLATION', 'COMPOSITION', 'OUTPUT'], MEMORY: ['SHORT TERM', 'LONG TERM', 'CONTEXT', 'PROJECTS', 'KNOWLEDGE', 'PATTERNS'], LOGIC: ['ANALYSIS', 'REASONING', 'VALIDATION', 'DECISION', 'CALCULATION'], VISION: ['OBJECTS', 'STRUCTURE', 'DETAIL', 'SPATIAL', 'INTERPRETATION'], CREATIVE: ['IDEAS', 'DESIGN', 'WRITING', 'VARIATION', 'IMAGINATION'], PLANNING: ['GOALS', 'TASKS', 'PRIORITIES', 'SEQUENCE', 'EXECUTION'], CONTEXT: ['CURRENT INPUT', 'SESSION', 'HISTORY', 'RELATIONSHIPS', 'RELEVANCE'], RESPONSE: ['COMPOSITION', 'CHECK', 'FORMAT', 'VOICE', 'OUTPUT'],
@@ -31,6 +32,7 @@ function NeuralMiniMap({ activity }) {
 }
 
 function PlanetaryPyramid({ runtime }) {
+  const conversation = useConversation(), [coreOpen, setCoreOpen] = useState(false), [coreInput, setCoreInput] = useState('')
   const rows = [{ zone: { name: 'JONA AI', color: '#55ff76' }, count: 1 }, ...ZONES.map((zone, index) => ({ zone, count: ORBIT_COUNTS[index] }))]
   const y = index => 7 + index * 11.2
   const x = (item, count) => 50 + (item - (count - 1) / 2) * 10.4
@@ -46,10 +48,12 @@ function PlanetaryPyramid({ runtime }) {
     return <g key={`rail-${rowIndex}-${item}`}><path className="tree-wire tree-rail" d={path} /><path className="tree-current tree-rail" d={path} style={{ '--delay': `${-(rowIndex * .22 + item * .11)}s` }} /></g>
   }))
   const select = name => {
-    if (name === 'JONA AI') { runtime.focusSystem(null); runtime.setPyramidOpen(false); return }
+    if (name === 'JONA AI') { runtime.focusSystem(null); setCoreOpen(true); return }
     runtime.activateSystem(name); runtime.setSystemIntensity(name, 1); runtime.focusSystem(name); runtime.setPyramidOpen(false)
   }
-  return <div className="pyramid-window tree-window"><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>44 FUNCTIONAL NODES · 8 ORBITAL LEVELS · SELECT A PLANET</p><div className="planet-tree"><svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none"><defs><filter id="tree-glow"><feGaussianBlur stdDeviation=".42" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>{branches}{rails}</svg>{rows.map((row, rowIndex) => <div className="tree-row" key={row.zone.name} style={{ '--row-y': `${y(rowIndex)}%` }}>{Array.from({ length: row.count }, (_, item) => <button key={item} onClick={() => select(row.zone.name)} style={{ '--node-color': row.zone.color, '--node-x': `${x(item, row.count)}%` }}><i /><span>{row.zone.name === 'JONA AI' ? 'JONA AI' : `${row.zone.name} ${String(item + 1).padStart(2, '0')}`}</span><small>{rowIndex ? `ORBIT ${rowIndex}` : 'CORE'}</small></button>)}</div>)}</div><small>Svaka kartica predstavlja jednu planetu i aktivira njen orbitalni sistem.</small></div>
+  const askJona = async event => { event.preventDefault(); const text = coreInput.trim(); if (!text || conversation.busy) return; setCoreInput(''); await conversation.submit(text) }
+  const latest = [...conversation.messages].reverse().find(message => message.role === 'assistant' || message.role === 'system')
+  return <div className={`pyramid-window tree-window ${coreOpen ? 'core-active' : ''}`}><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>44 FUNCTIONAL NODES · 8 ORBITAL LEVELS · SELECT A PLANET</p>{coreOpen && <section className="core-console"><header><div><span>JONA AI</span><h3>CORE COMMAND CENTER</h3></div><button onClick={() => setCoreOpen(false)}>BACK TO PYRAMID</button></header><div className="core-console-status"><span>CORE STATE<b>{runtime.state}</b></span><span>CORE LOAD<b>{runtime.coreLoad}%</b></span><span>REQUESTS<b>{String(runtime.requestCount).padStart(3, '0')}</b></span></div><form onSubmit={askJona}><input value={coreInput} onChange={event => setCoreInput(event.target.value)} placeholder="ASK JONA OR ENTER A COMMAND..." disabled={conversation.busy} /><button disabled={!coreInput.trim() || conversation.busy}>{conversation.busy ? 'PROCESSING' : 'SEND'}</button></form><div className="core-console-actions"><button onClick={runtime.activate} disabled={runtime.state !== 'IDLE'}>ACTIVATE ALL</button><button onClick={runtime.stopAll}>STOP / RESET</button></div><article><span>JONA RESPONSE</span><p>{latest?.text || 'Core ready. Unesi pitanje ili pokreni kompletan sistem.'}</p></article></section>}<div className="planet-tree"><svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none"><defs><filter id="tree-glow"><feGaussianBlur stdDeviation=".42" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>{branches}{rails}</svg>{rows.map((row, rowIndex) => <div className="tree-row" key={row.zone.name} style={{ '--row-y': `${y(rowIndex)}%` }}>{Array.from({ length: row.count }, (_, item) => <button key={item} onClick={() => select(row.zone.name)} style={{ '--node-color': row.zone.color, '--node-x': `${x(item, row.count)}%` }}><i /><span>{row.zone.name === 'JONA AI' ? 'JONA AI' : `${row.zone.name} ${String(item + 1).padStart(2, '0')}`}</span><small>{rowIndex ? `ORBIT ${rowIndex}` : 'CORE'}</small></button>)}</div>)}</div><small>Svaka kartica predstavlja jednu planetu i aktivira njen orbitalni sistem.</small></div>
 }
 
 export default function HUD() {

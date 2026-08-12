@@ -29,6 +29,7 @@ export function NeuralStateProvider({ children }) {
   const resetActivity = useCallback(() => { setSequence([]); setIntensities({}); setSignal(current => ({ path: [], step: -1, run: current.run })) }, [])
   const startSession = useCallback(() => setSessionStartedAt(current => current || Date.now()), [])
   const incrementRequests = useCallback(() => setRequestCount(count => count + 1), [])
+  const stopAll = useCallback(() => { clearRun(); runId.current += 1; setState('IDLE'); setSequence([]); setIntensities({}); setSignal(current => ({ path: [], step: -1, run: current.run + 1 })); setDemoResponse('') }, [])
   useEffect(() => { const timer = setInterval(() => setRuntimeNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
 
   const systemActivity = useMemo(() => {
@@ -62,5 +63,5 @@ export function NeuralStateProvider({ children }) {
     timers.current.push(setTimeout(() => { if (runId.current !== id) return; setState('IDLE'); setSequence([]); setSignal(s => ({ ...s, step: -1 })) }, 7100))
   }, [])
 
-  return <NeuralStateContext.Provider value={{ state, sequence, signal, focusedSystem, hoveredSystem, nearbySystem, pyramidOpen, demoResponse, intensities, systemActivity, coreLoad, signalDensity, systemEnergy, activeRoute, sessionSeconds, requestCount, runtimeNow, activate, activateSystem, sendSignal, setAIState, focusSystem, setSystemIntensity, resetActivity, setHoveredSystem, setNearbySystem, setPyramidOpen, startSession, incrementRequests }}>{children}</NeuralStateContext.Provider>
+  return <NeuralStateContext.Provider value={{ state, sequence, signal, focusedSystem, hoveredSystem, nearbySystem, pyramidOpen, demoResponse, intensities, systemActivity, coreLoad, signalDensity, systemEnergy, activeRoute, sessionSeconds, requestCount, runtimeNow, activate, activateSystem, sendSignal, setAIState, focusSystem, setSystemIntensity, resetActivity, stopAll, setHoveredSystem, setNearbySystem, setPyramidOpen, startSession, incrementRequests }}>{children}</NeuralStateContext.Provider>
 }
