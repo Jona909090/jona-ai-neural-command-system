@@ -17,18 +17,8 @@ const PLANETS = [
 ]
 
 const ROMAN = ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
-const ORBITAL_BODIES = PLANETS.flatMap((planet, orbitIndex) => {
-  const bodyCount = orbitIndex >= PLANETS.length - 2 ? 8 : 4
-  return Array.from({ length: bodyCount }, (_, slotIndex) => ({
-    ...planet,
-    id: `${planet.name}-${slotIndex + 1}`,
-    label: slotIndex ? `${planet.label} ${ROMAN[slotIndex]}` : planet.label,
-    phase: planet.phase + slotIndex * Math.PI * 2 / bodyCount,
-    variant: orbitIndex * 8 + slotIndex,
-    companion: slotIndex > 0,
-    slotIndex,
-  }))
-})
+const ORBIT_COUNTS = PLANETS.map((_, index) => 4 * 2 ** index)
+const ORBITAL_BODIES = PLANETS.map((planet, orbitIndex) => ({ ...planet, id: `${planet.name}-1`, variant: orbitIndex * 8, companion: false, slotIndex: 0 }))
 
 function seeded(seed) {
   let value = seed * 9301 + 49297
@@ -116,6 +106,21 @@ function OrbitRing({ radius }) {
   return <Line points={points} color="#245c39" transparent opacity={.28} lineWidth={.45} />
 }
 
+function OrbitColony({ config, orbitIndex, active }) {
+  const mesh = useRef(), dummy = useMemo(() => new THREE.Object3D(), []), count = ORBIT_COUNTS[orbitIndex] - 1
+  const size = Math.max(.025, Math.min(config.size * .42, Math.PI * 2 * config.radius / ORBIT_COUNTS[orbitIndex] * .28))
+  useFrame(({ clock }) => {
+    if (!mesh.current) return
+    for (let index = 0; index < count; index++) {
+      const angle = config.phase + clock.elapsedTime * config.speed + (index + 1) * Math.PI * 2 / ORBIT_COUNTS[orbitIndex]
+      dummy.position.set(Math.cos(angle) * config.radius, Math.sin(angle) * config.radius, Math.sin(angle * 3 + orbitIndex) * .035)
+      dummy.rotation.set(angle * .13, angle, 0); dummy.scale.setScalar(active ? 1.18 : 1); dummy.updateMatrix(); mesh.current.setMatrixAt(index, dummy.matrix)
+    }
+    mesh.current.instanceMatrix.needsUpdate = true
+  })
+  return <instancedMesh ref={mesh} args={[null, null, count]} frustumCulled={false}><sphereGeometry args={[size, 10, 8]} /><meshStandardMaterial color={config.color} emissive={config.color} emissiveIntensity={active ? .5 : .12} roughness={.72} /></instancedMesh>
+}
+
 function OrbitPlanet({ config, index, active, focused, voiceLevel, onHover, onFocus, registerPosition }) {
   const pivot = useRef(), body = useRef(), [hovered, setHovered] = useState(false), world = useMemo(() => new THREE.Vector3(), []), texture = useMemo(() => planetTexture(config, config.variant), [config])
   useFrame(({ clock }, delta) => {
@@ -153,7 +158,7 @@ function TravelSignal({ signal, positions }) {
 
 export default function NeuralNetwork({ ready, boot }) {
   const system = useRef(), positions = useRef({}), selectedPosition = useRef(null), proximityState = useRef(null), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
-  const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem, setNearbySystem } = useNeuralState(), voice = useVoice()
+  const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem, setNearbySystem, setPyramidOpen } = useNeuralState(), voice = useVoice()
   const booting = ['impact', 'network', 'identity', 'zones', 'online', 'reveal'].includes(boot?.phase)
   const power = Math.max(voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .72 : state === 'LISTENING' ? .5 : 0)
   const focusPosition = selectedPosition.current || positions.current[focusedSystem]
@@ -172,8 +177,9 @@ export default function NeuralNetwork({ ready, boot }) {
 
   return <group ref={system} scale={ready || booting ? 1 : .05}>
     <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
-    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null) }} />
+    <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null); setPyramidOpen(true) }} />
     {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
+    {PLANETS.map((config, index) => <OrbitColony key={`colony-${config.name}`} config={config} orbitIndex={index} active={systemActivity[config.name] > .55} />)}
     {ORBITAL_BODIES.map((config, index) => <OrbitPlanet key={config.id} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={(name, point) => { selectedPosition.current = point; focusSystem(name) }} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />
     {hovered && positions.current[hovered] && <Line points={[new THREE.Vector3(), positions.current[hovered]]} color={PLANETS.find(p => p.name === hovered)?.color || '#55ff77'} transparent opacity={.45} lineWidth={1} />}

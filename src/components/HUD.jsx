@@ -19,6 +19,7 @@ const PLANET_INFO = {
   RESPONSE: { type: 'OUTPUT WORLD', text: 'Sastavlja, provjerava i isporučuje završni JONA odgovor.', inside: ['COMPOSITION', 'CHECK', 'VOICE', 'OUTPUT'] },
 }
 const fmtTime = seconds => [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60].map(value => String(value).padStart(2, '0')).join(':')
+const ORBIT_COUNTS = ZONES.map((_, index) => 4 * 2 ** index)
 
 function ActivityMeter({ value }) {
   const bars = [0, 1, 2, 3, 4]
@@ -51,6 +52,7 @@ export default function HUD() {
   const centerCore = () => { runtime.focusSystem(null); runtime.setNearbySystem(null) }
   useEffect(() => () => scanTimers.current.forEach(clearTimeout), [])
   return <>
+    {runtime.pyramidOpen && <div className="pyramid-window"><div className="pyramid-head"><div><span>JONA AI CORE DATABASE</span><h2>PLANETARY PYRAMID</h2></div><button onClick={() => runtime.setPyramidOpen(false)}>CLOSE ×</button></div><p>ORBITAL HIERARCHY · 1,020 PLANETS · EXPONENTIAL STRUCTURE</p><div className="pyramid-levels">{ZONES.map((zone, index) => <div className="pyramid-level" key={zone.name} style={{ '--level-color': zone.color, '--level-width': `${30 + index * 9}%` }}><span>{index + 1}</span><div>{Array.from({ length: Math.min(ORBIT_COUNTS[index], 64) }, (_, dot) => <i key={dot} />)}</div><strong>{zone.name}<b>{ORBIT_COUNTS[index]} PLANETS</b></strong></div>)}</div><small>Svaki sljedeći orbitalni nivo udvostručuje kapacitet prethodnog nivoa.</small></div>}
     {focus && <div className="focus-mode"><span>{focus} SYSTEM</span><strong>FOCUS MODE</strong><button onClick={() => runtime.focusSystem(null)}>← BACK TO JONA CORE</button></div>}
     <section className="hud identity live-status panel-corners">
       <div className="eyebrow">LIVE SYSTEM INTELLIGENCE</div><h1>JONA <em>AI</em></h1><p>NEURAL COMMAND SYSTEM</p>
