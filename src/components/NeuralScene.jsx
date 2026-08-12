@@ -7,7 +7,7 @@ import NeuralNetwork from './NeuralNetwork'
 import { CONFIG } from '../config/neuralConfig'
 
 export default function NeuralScene({ ready, boot }) {
-  const revealed = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot.phase)
+  const revealed = ['impact', 'network', 'identity', 'zones', 'online', 'reveal'].includes(boot.phase)
   return <div className={`scene ${ready ? 'online' : ''} ${revealed ? 'boot-reveal' : ''} boot-${boot.phase}`}>
     <Canvas dpr={[1.25, 2]} camera={{ position: [0, 0, 24], fov: 48 }} gl={{ antialias: true, powerPreference: 'high-performance', alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: .88, outputColorSpace: THREE.SRGBColorSpace }} onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = .88 }}>
       <color attach="background" args={['#000106']} />

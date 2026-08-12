@@ -154,7 +154,7 @@ function TravelSignal({ signal, positions }) {
 export default function NeuralNetwork({ ready, boot }) {
   const system = useRef(), positions = useRef({}), selectedPosition = useRef(null), proximityState = useRef(null), { pointer, camera, controls } = useThree(), [hovered, setHovered] = useState(null)
   const { state, signal, focusedSystem, focusSystem, systemActivity, setHoveredSystem, setNearbySystem } = useNeuralState(), voice = useVoice()
-  const booting = ['impact', 'network', 'identity', 'zones', 'online'].includes(boot?.phase)
+  const booting = ['impact', 'network', 'identity', 'zones', 'online', 'reveal'].includes(boot?.phase)
   const power = Math.max(voice.amplitude, state === 'PROCESSING' ? 1 : state === 'RESPONDING' ? .72 : state === 'LISTENING' ? .5 : 0)
   const focusPosition = selectedPosition.current || positions.current[focusedSystem]
 
