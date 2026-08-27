@@ -16,7 +16,6 @@ const PLANETS = [
   { name: 'CONTEXT', label: 'CONTEXT', color: '#e83c9f', dark: '#4b0c35', radius: 10.15, size: .43, speed: .0051, phase: 2.78, surface: 'cloud' },
 ]
 
-const ROMAN = ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 const ORBIT_COUNTS = PLANETS.map((_, index) => index + 2)
 const ORBITAL_BODIES = PLANETS.map((planet, orbitIndex) => ({ ...planet, id: `${planet.name}-1`, variant: orbitIndex * 8, companion: false, slotIndex: 0 }))
 
@@ -62,42 +61,51 @@ function planetTexture(config, index) {
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8; return texture
 }
 
-function earthTexture() {
-  const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512
-  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#03130a'; ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.strokeStyle = '#0c4823'; ctx.lineWidth = 1
-  for (let x = 0; x <= 1024; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke() }
-  for (let y = 0; y <= 512; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke() }
-  ctx.fillStyle = '#43ff65'; ctx.shadowColor = '#31ff61'; ctx.shadowBlur = 14
-  const land = points => { ctx.beginPath(); points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill() }
-  land([[120,92],[180,58],[244,72],[278,118],[251,160],[212,174],[195,228],[146,205],[112,151]])
-  land([[226,240],[271,252],[294,306],[276,382],[244,451],[216,401],[198,332]])
-  land([[436,105],[502,79],[584,94],[641,128],[618,174],[555,176],[529,215],[466,197],[421,153]])
-  land([[500,207],[565,195],[608,245],[592,326],[544,406],[498,372],[474,297]])
-  land([[650,126],[730,93],[846,111],[904,163],[862,221],[783,211],[744,253],[680,210]])
-  land([[806,330],[868,315],[911,350],[889,401],[828,411],[792,372]])
-  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8; return texture
-}
-
 function Atmosphere({ color = '#35ff69', scale = 1.08 }) {
   return <mesh scale={scale}><sphereGeometry args={[1, 48, 48]} /><meshBasicMaterial color={color} transparent opacity={.075} side={THREE.BackSide} blending={THREE.AdditiveBlending} /></mesh>
 }
 
 function JonaEarth({ power, onActivate }) {
-  const planet = useRef(), clouds = useRef(), texture = useMemo(earthTexture, []), [hovered, setHovered] = useState(false)
+  const core = useRef(), ringA = useRef(), ringB = useRef(), aura = useRef(), [hovered, setHovered] = useState(false)
   useFrame(({ clock }, delta) => {
-    planet.current.rotation.y += delta * .075; clouds.current.rotation.y += delta * .105
-    const pulse = 1 + Math.sin(clock.elapsedTime * 1.5) * .012 + power * .018; planet.current.scale.setScalar(pulse)
+    if (!core.current) return
+    core.current.rotation.y += delta * .11
+    ringA.current.rotation.z += delta * .22
+    ringB.current.rotation.x -= delta * .17
+    const pulse = 1 + Math.sin(clock.elapsedTime * 1.8) * .018 + power * .035 + (hovered ? .025 : 0)
+    core.current.scale.setScalar(pulse)
+    aura.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 1.35) * .035 + power * .05)
   })
+
+  const emissiveBoost = .7 + power * 1.45 + (hovered ? .7 : 0)
+
   return <group>
-    <group ref={planet}>
-      <mesh castShadow receiveShadow onClick={event => { event.stopPropagation(); onActivate() }} onPointerOver={event => { event.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default' }}><sphereGeometry args={[1.65, 96, 96]} /><meshStandardMaterial map={texture} color="#76ff88" roughness={.58} metalness={.08} emissive="#0cff3d" emissiveIntensity={.18 + power * .2 + (hovered ? .18 : 0)} /></mesh>
-      <mesh ref={clouds} scale={1.006}><sphereGeometry args={[1.65, 48, 48]} /><meshBasicMaterial color="#b8ffc3" wireframe transparent opacity={.085} /></mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[1.78, .013, 5, 128]} /><meshBasicMaterial color="#3cff6a" transparent opacity={.5} /></mesh>
-      <Atmosphere scale={1.82} />
+    <group ref={core}>
+      <mesh castShadow receiveShadow onClick={event => { event.stopPropagation(); onActivate() }} onPointerOver={event => { event.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer' }} onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default' }}>
+        <sphereGeometry args={[1.68, 96, 96]} />
+        <meshPhysicalMaterial color="#120824" roughness={.22} metalness={.42} clearcoat={1} clearcoatRoughness={.16} emissive="#8b2cff" emissiveIntensity={emissiveBoost * .32} />
+      </mesh>
+
+      <mesh scale={1.012}>
+        <sphereGeometry args={[1.68, 48, 48]} />
+        <meshBasicMaterial color="#c66cff" wireframe transparent opacity={.12 + power * .08} blending={THREE.AdditiveBlending} />
+      </mesh>
+
+      <group position={[0, .05, 1.52]}>
+        <mesh position={[-.48, .22, 0]} scale={[.35, .5, .12]}><sphereGeometry args={[.42, 32, 32]} /><meshBasicMaterial color="#71f7ff" toneMapped={false} /></mesh>
+        <mesh position={[.48, .22, 0]} scale={[.35, .5, .12]}><sphereGeometry args={[.42, 32, 32]} /><meshBasicMaterial color="#71f7ff" toneMapped={false} /></mesh>
+        <mesh position={[0, -.38, .02]} rotation={[0, 0, Math.PI]}><torusGeometry args={[.34, .045, 10, 42, Math.PI]} /><meshBasicMaterial color="#f0a4ff" toneMapped={false} /></mesh>
+      </group>
+
+      <mesh ref={ringA} rotation={[1.1, .18, .35]}><torusGeometry args={[2.02, .035, 8, 180]} /><meshBasicMaterial color="#a94cff" transparent opacity={.82} toneMapped={false} /></mesh>
+      <mesh ref={ringB} rotation={[.25, 1.28, -.3]}><torusGeometry args={[2.18, .022, 8, 180]} /><meshBasicMaterial color="#37dfff" transparent opacity={.68} toneMapped={false} /></mesh>
+      <Atmosphere color="#9f4dff" scale={1.96} />
     </group>
-    <pointLight color="#37ff67" intensity={3.2 + power * 2.2} distance={8} />
-    <Html center distanceFactor={9} className={`planet-core-label ${hovered ? 'ready' : ''}`}><strong>JONA AI</strong><span>{hovered ? 'ACTIVATE CORE' : 'WORLD CORE'}</span></Html>
+
+    <mesh ref={aura} scale={2.45}><sphereGeometry args={[1, 48, 48]} /><meshBasicMaterial color="#7a2cff" transparent opacity={.045 + power * .03} side={THREE.BackSide} blending={THREE.AdditiveBlending} /></mesh>
+    <pointLight color="#a84cff" intensity={5.2 + power * 4.2} distance={10} />
+    <pointLight color="#39dfff" intensity={2.4 + power * 2.1} distance={7} position={[0, 0, 2]} />
+    <Html center distanceFactor={9} className={`planet-core-label ${hovered ? 'ready' : ''}`}><strong>JONA AI</strong><span>{hovered ? 'OPEN CENTRAL CORE' : 'CENTRAL CORE'}</span></Html>
   </group>
 }
 
@@ -176,12 +184,12 @@ export default function NeuralNetwork({ ready, boot }) {
   })
 
   return <group ref={system} scale={ready || booting ? 1 : .05}>
-    <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#d9ffe1" />
+    <ambientLight intensity={.32} /><directionalLight position={[4, 6, 8]} intensity={2.4} color="#e7ddff" />
     <JonaEarth power={power} onActivate={() => { focusSystem(null); setNearbySystem(null); setPyramidOpen(true) }} />
     {PLANETS.map(config => <OrbitRing key={`orbit-${config.name}`} radius={config.radius} />)}
     {PLANETS.map((config, index) => <OrbitColony key={`colony-${config.name}`} config={config} orbitIndex={index} active={systemActivity[config.name] > .55} />)}
     {ORBITAL_BODIES.map((config, index) => <OrbitPlanet key={config.id} config={config} index={index} active={systemActivity[config.name] > .55} focused={focusedSystem === config.name} voiceLevel={(voice.status === 'LISTENING' && config.name === 'LANGUAGE') || (voice.status === 'SPEAKING' && config.name === 'RESPONSE') ? voice.amplitude : 0} onHover={name => { setHovered(name); setHoveredSystem(name) }} onFocus={(name, point) => { selectedPosition.current = point; focusSystem(name) }} registerPosition={(name, point) => { positions.current[name] = point.clone() }} />)}
     <TravelSignal signal={signal} positions={positions} />
-    {hovered && positions.current[hovered] && <Line points={[new THREE.Vector3(), positions.current[hovered]]} color={PLANETS.find(p => p.name === hovered)?.color || '#55ff77'} transparent opacity={.45} lineWidth={1} />}
+    {hovered && positions.current[hovered] && <Line points={[new THREE.Vector3(), positions.current[hovered]]} color={PLANETS.find(p => p.name === hovered)?.color || '#9f4dff'} transparent opacity={.45} lineWidth={1} />}
   </group>
 }
